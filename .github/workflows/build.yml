@@ -1,0 +1,30 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install GMP
+        run: sudo apt-get install -y libgmp-dev
+
+      - name: Build
+        run: gcc -o fib fib.c -lgmp
+
+      - name: Test
+        run: |
+          ./fib 10
+          if [ $? -eq 0 ]; then
+            echo "Test passed successfully"
+          else
+            echo "Test failed"
+            exit 1
+          fi
