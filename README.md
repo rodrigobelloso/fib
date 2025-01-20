@@ -1,3 +1,5 @@
+[![GitHub Actions tests](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml) [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
 # fib
 
 High-precision Fibonacci number calculator implemented in C using the GMP (GNU Multiple Precision Arithmetic) library.
