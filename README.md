@@ -16,7 +16,7 @@ This program calculates Fibonacci numbers up to a specified limit using arbitrar
 1. Install GMP if not already installed:
 
 ```sh
-# Debian
+# Debian based distros
 apt-get install libgmp-dev
 
 # macOS
@@ -26,7 +26,7 @@ brew install gmp
 ## Compiling
 
 ```sh
-# Debian
+# Debian based distros
 gcc -o fib fib.c -lgmp
 clang -o fib fib.c -lgmp
 
