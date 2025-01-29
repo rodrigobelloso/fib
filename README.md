@@ -42,3 +42,7 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
 ```sh
 ./fib <number>
 ```
+
+## License
+
+fib is under the [GNU GENERAL PUBLIC LICENSE 3](./LICENSE).
