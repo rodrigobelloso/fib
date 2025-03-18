@@ -2,11 +2,11 @@
 #error "C99 Minimum Required"
 #endif
 
+#include <errno.h>
+#include <gmp.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <gmp.h>
 #include <time.h>
-#include <errno.h>
 
 int main(int argc, char *argv[argc + 1]) {
   if (argc != 2) {
@@ -53,9 +53,11 @@ int main(int argc, char *argv[argc + 1]) {
   if (printf("Fibonacci Number %zu: ", i) < 0) {
     return EXIT_FAILURE;
   }
-  if (!mpz_out_str(stdout, 10, b)) {
+
+  if (gmp_printf("%Zd", b) < 0) {
     return EXIT_FAILURE;
   }
+  
   if (putchar('\n') == EOF) {
     return EXIT_FAILURE;
   }
