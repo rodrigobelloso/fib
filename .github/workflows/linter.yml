@@ -17,7 +17,7 @@ jobs:
         id: files-hash
         run: |
           SHELL_HASH=$(find . -name "*.sh" -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
-          C_HASH=$(find . -name "*.c" -name "*.h" -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
+          C_HASH=$(find . -name "*.c" -o -name "*.h" -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
           echo "shell_hash=$SHELL_HASH" >> $GITHUB_OUTPUT
           echo "c_hash=$C_HASH" >> $GITHUB_OUTPUT
 
