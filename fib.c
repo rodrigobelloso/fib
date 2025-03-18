@@ -53,11 +53,9 @@ int main(int argc, char *argv[argc + 1]) {
   if (printf("Fibonacci Number %zu: ", i) < 0) {
     return EXIT_FAILURE;
   }
-
   if (gmp_printf("%Zd", b) < 0) {
     return EXIT_FAILURE;
   }
-  
   if (putchar('\n') == EOF) {
     return EXIT_FAILURE;
   }
