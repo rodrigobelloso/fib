@@ -50,7 +50,7 @@ int main(int argc, char *argv[argc + 1]) {
     return EXIT_FAILURE;
   }
 
-  if (printf("Fibonacci Number %zu: ", i) < 0) {
+  if (printf("Fibonacci Number %ld: ", i) < 0) {
     return EXIT_FAILURE;
   }
   if (gmp_printf("%Zd", b) < 0) {
