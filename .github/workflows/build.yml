@@ -7,6 +7,67 @@ on:
     branches: [main, master]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create file hash
+        id: files-hash
+        run: |
+          SHELL_HASH=$(find . -name "*.sh" -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
+          C_HASH=$(find . -name "*.c" -o -name "*.h" -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
+          echo "shell_hash=$SHELL_HASH" >> $GITHUB_OUTPUT
+          echo "c_hash=$C_HASH" >> $GITHUB_OUTPUT
+
+      - name: Configure shellcheck cache
+        uses: actions/cache@v3
+        id: cache-shellcheck
+        with:
+          path: |
+            ~/.local/bin/shellcheck
+            ~/.cabal/bin/shellcheck
+          key: ${{ runner.os }}-shellcheck-${{ steps.files-hash.outputs.shell_hash }}
+          restore-keys: |
+            ${{ runner.os }}-shellcheck-
+
+      - name: Install shellcheck
+        if: steps.cache-shellcheck.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Verify shell scripts syntax
+        run: |
+          echo "Running ShellCheck on shell scripts..."
+          for file in $(find . -name "*.sh" -type f); do
+            echo "Analyzing $file"
+            shellcheck "$file"
+          done
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Verify C code formatting
+        run: |
+          echo "Verifying C code format..."
+          for file in $(find . -name "*.c" -o -name "*.h" -type f); do
+            echo "Analyzing format in $file"
+            clang-format --dry-run --Werror "$file"
+          done
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get install -y cppcheck
+
+      - name: Run static analysis with cppcheck
+        run: |
+          echo "Performing static analysis of C code..."
+          cppcheck --enable=all --suppress=missingIncludeSystem --error-exitcode=1 *.c
+
   build:
     needs: lint
     runs-on: ubuntu-latest
