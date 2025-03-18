@@ -15,7 +15,7 @@ run_test() {
 
   echo -n "Testing $test_name: "
   
-  output=$(./fib $number)
+  output=$(./fib "$number")
   exit_code=$?
   
   if [ $exit_code -ne 0 ]; then
@@ -40,31 +40,35 @@ total_tests=0
 passed_tests=0
 
 echo "=== Tests with known Fibonacci values ==="
-run_test 0 "Fibonacci Number 0: 0" "Fibonacci 0"
+if run_test 0 "Fibonacci Number 0: 0" "Fibonacci 0"; then
+  ((passed_tests++))
+fi
 ((total_tests++))
-[ $? -eq 0 ] && ((passed_tests++))
 
-run_test 1 "Fibonacci Number 1: 1" "Fibonacci 1"
+if run_test 1 "Fibonacci Number 1: 1" "Fibonacci 1"; then
+  ((passed_tests++))
+fi
 ((total_tests++))
-[ $? -eq 0 ] && ((passed_tests++))
 
-run_test 10 "Fibonacci Number 10: 55" "Fibonacci 10"
+if run_test 10 "Fibonacci Number 10: 55" "Fibonacci 10"; then
+  ((passed_tests++))
+fi
 ((total_tests++))
-[ $? -eq 0 ] && ((passed_tests++))
 
-run_test 20 "Fibonacci Number 20: 6765" "Fibonacci 20"
+if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci 20"; then
+  ((passed_tests++))
+fi
 ((total_tests++))
-[ $? -eq 0 ] && ((passed_tests++))
 
 echo -e "\n=== Large number test ==="
-run_test 100 "Fibonacci Number 100: 354224848179261915075" "Fibonacci 100"
+if run_test 100 "Fibonacci Number 100: 354224848179261915075" "Fibonacci 100"; then
+  ((passed_tests++))
+fi
 ((total_tests++))
-[ $? -eq 0 ] && ((passed_tests++))
 
 echo -e "\n=== Error handling tests ==="
 echo -n "Testing without arguments: "
-./fib >/dev/null 2>&1
-if [ $? -ne 0 ]; then
+if ! ./fib >/dev/null 2>&1; then
   echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
   ((passed_tests++))
 else
@@ -74,8 +78,7 @@ fi
 ((total_tests++))
 
 echo -n "Testing with non-numeric argument: "
-./fib abc >/dev/null 2>&1
-if [ $? -ne 0 ]; then
+if ! ./fib abc >/dev/null 2>&1; then
   echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
   ((passed_tests++))
 else
@@ -102,7 +105,7 @@ echo -e "Successful tests: $passed_tests"
 if [ ${#failed_tests[@]} -gt 0 ]; then
   echo -e "\n${YELLOW}Failed tests (${#failed_tests[@]}):${NC}"
   for ((i=0; i<${#failed_tests[@]}; i++)); do
-    echo -e "  ${RED}$(($i+1)). ${failed_tests[$i]}${NC}"
+    echo -e "  ${RED}$((i+1)). ${failed_tests[$i]}${NC}"
   done
   echo
   echo -e "${RED}SOME TESTS FAILED (${#failed_tests[@]} of $total_tests)${NC}"
