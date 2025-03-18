@@ -7,7 +7,11 @@ on:
     branches: [main, master]
 
 jobs:
+  lint:
+    uses: ./.github/workflows/linter.yml
+
   build:
+    needs: lint
     runs-on: ubuntu-latest
 
     steps:
@@ -15,16 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get install -y libgmp-dev shellcheck
-
-      - name: Lint shell scripts
-        run: |
-          echo "Linting shell scripts..."
-          find . -type f -name "*.sh" | xargs shellcheck -S warning
-          if [ $? -ne 0 ]; then
-            echo "Shell script linting failed"
-            exit 1
-          fi
+          sudo apt-get install -y libgmp-dev
 
       - name: Build
         run: gcc -o fib fib.c -lgmp

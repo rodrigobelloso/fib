@@ -84,7 +84,7 @@ else
 fi
 ((total_tests++))
 
-echo -e "\n=== Basic performance test ==="
+echo -e "\n=== Performance test ==="
 echo "Calculating Fibonacci(1000)..."
 time ./fib 1000 >/dev/null
 perf_result=$?
