@@ -13,18 +13,23 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install GMP
-        run: sudo apt-get install -y libgmp-dev
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y libgmp-dev shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          echo "Linting shell scripts..."
+          find . -type f -name "*.sh" | xargs shellcheck -S warning
+          if [ $? -ne 0 ]; then
+            echo "Shell script linting failed"
+            exit 1
+          fi
 
       - name: Build
         run: gcc -o fib fib.c -lgmp
 
       - name: Test
         run: |
-          ./fib 10
-          if [ $? -eq 0 ]; then
-            echo "Test passed successfully"
-          else
-            echo "Test failed"
-            exit 1
-          fi
+          chmod +x test.sh
+          ./test.sh
