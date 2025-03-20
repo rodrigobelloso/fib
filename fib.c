@@ -21,16 +21,22 @@ void display_help(const char *program_name) {
   printf("  -o, --output <filename>\n");
   printf("                Save the result to the specified file.\n");
   printf("\n");
-  printf("Examples:\n");
-  printf("  %s 10         Calculate the 10th Fibonacci number.\n", program_name);
+  printf(
+      "  %s 10         Calculate the 10th Fibonacci number.\n",
+      program_name);
   printf("  %s 100 -t     Calculate and show the time taken.\n", program_name);
-  printf("  %s 50 -r      Calculate and save raw result to a file.\n", program_name);
+  printf(
+      "  %s 50 -r      Calculate and save raw result to a file.\n",
+      program_name);
   printf("\n");
 }
 
 int main(int argc, const char *const argv[argc + 1]) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", argv[0]);
+    fprintf(
+        stderr,
+        "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n",
+        argv[0]);
     fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
     return EXIT_FAILURE;
   }
@@ -73,7 +79,10 @@ int main(int argc, const char *const argv[argc + 1]) {
         return EXIT_FAILURE;
       }
     } else {
-      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", argv[0]);
+      fprintf(
+          stderr,
+          "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n",
+          argv[0]);
       fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
       return EXIT_FAILURE;
     }
