@@ -18,7 +18,7 @@ int main(int argc, char *argv[argc + 1]) {
   int show_time = 0;
   int raw_output = 0;
   long limit = -1;
-  char *output_file = NULL;
+  char const *output_file = NULL;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-t") == 0) {
