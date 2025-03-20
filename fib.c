@@ -6,22 +6,39 @@
 #include <gmp.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 int main(int argc, char *argv[argc + 1]) {
-  if (argc != 2) {
-    fprintf(stderr, "Usage: %s <limit>\n", argv[0]);
+  if (argc < 2 || argc > 3) {
+    fprintf(stderr, "Usage: %s <limit> [-t]\n", argv[0]);
     return EXIT_FAILURE;
   }
 
-  char *end = argv[1];
+  int show_time = 0;
+  int limit_arg_idx = 1;
+
+  if (argc == 3) {
+    if (strcmp(argv[1], "-t") == 0) {
+      show_time = 1;
+      limit_arg_idx = 2;
+    } else if (strcmp(argv[2], "-t") == 0) {
+      show_time = 1;
+      limit_arg_idx = 1;
+    } else {
+      fprintf(stderr, "Usage: %s <limit> [-t]\n", argv[0]);
+      return EXIT_FAILURE;
+    }
+  }
+
+  char *end = argv[limit_arg_idx];
   errno = 0;
-  const long limit = strtol(argv[1], &end, 10);
-  if ((argv[1] == end) || *end) {
-    fprintf(stderr, "Error Parsing %s\n", argv[1]);
+  const long limit = strtol(argv[limit_arg_idx], &end, 10);
+  if ((argv[limit_arg_idx] == end) || *end) {
+    fprintf(stderr, "Error Parsing %s\n", argv[limit_arg_idx]);
     return EXIT_FAILURE;
   } else if (errno == ERANGE) {
-    perror(argv[1]);
+    perror(argv[limit_arg_idx]);
     return EXIT_FAILURE;
   }
 
@@ -30,10 +47,13 @@ int main(int argc, char *argv[argc + 1]) {
   mpz_init_set_ui(b, 0);
   mpz_init(c);
 
-  const clock_t start_time = clock();
-  if (start_time == (clock_t)-1) {
-    fprintf(stderr, "Error start_time clock()\n");
-    return EXIT_FAILURE;
+  clock_t start_time = (clock_t)0;
+  if (show_time) {
+    start_time = clock();
+    if (start_time == (clock_t)-1) {
+      fprintf(stderr, "Error start_time clock()\n");
+      return EXIT_FAILURE;
+    }
   }
 
   long i = 0;
@@ -44,10 +64,13 @@ int main(int argc, char *argv[argc + 1]) {
     ++i;
   }
 
-  const clock_t end_time = clock();
-  if (end_time == (clock_t)-1) {
-    fprintf(stderr, "Error end_time clock()\n");
-    return EXIT_FAILURE;
+  clock_t end_time = (clock_t)0;
+  if (show_time) {
+    end_time = clock();
+    if (end_time == (clock_t)-1) {
+      fprintf(stderr, "Error end_time clock()\n");
+      return EXIT_FAILURE;
+    }
   }
 
   if (printf("Fibonacci Number %ld: ", i) < 0) {
@@ -64,11 +87,14 @@ int main(int argc, char *argv[argc + 1]) {
   mpz_clear(b);
   mpz_clear(c);
 
-  const double time_taken =
-      ((double)(end_time - start_time)) / (double)CLOCKS_PER_SEC;
-  if (printf("Calculation Time: %lf seconds\n", time_taken) < 0) {
-    return EXIT_FAILURE;
+  if (show_time) {
+    const double time_taken =
+        ((double)(end_time - start_time)) / (double)CLOCKS_PER_SEC;
+    if (printf("Calculation Time: %lf seconds\n", time_taken) < 0) {
+      return EXIT_FAILURE;
+    }
   }
+
   if (fflush(stdout) == EOF) {
     return EXIT_FAILURE;
   }
