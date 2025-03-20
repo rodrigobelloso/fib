@@ -10,35 +10,52 @@
 #include <time.h>
 
 int main(int argc, char *argv[argc + 1]) {
-  if (argc < 2 || argc > 3) {
-    fprintf(stderr, "Usage: %s <limit> [-t]\n", argv[0]);
+  if (argc < 2) {
+    fprintf(stderr, "Usage: %s <limit> [-t] [-r] [-o filename]\n", argv[0]);
     return EXIT_FAILURE;
   }
 
   int show_time = 0;
-  int limit_arg_idx = 1;
-
-  if (argc == 3) {
-    if (strcmp(argv[1], "-t") == 0) {
+  int raw_output = 0;
+  long limit = -1;
+  char *output_file = NULL;
+  
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-t") == 0) {
       show_time = 1;
-      limit_arg_idx = 2;
-    } else if (strcmp(argv[2], "-t") == 0) {
-      show_time = 1;
-      limit_arg_idx = 1;
+    } else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--raw") == 0) {
+      raw_output = 1;
+    } else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
+      if (i + 1 < argc) {
+        output_file = argv[++i];
+      } else {
+        fprintf(stderr, "Error: Missing filename for -o/--output option\n");
+        return EXIT_FAILURE;
+      }
+    } else if (limit == -1) {
+      if (argv[i][0] == '-' && argv[i][1] != '\0') {
+        fprintf(stderr, "Unknown option: %s\n", argv[i]);
+        return EXIT_FAILURE;
+      }
+      
+      char *end;
+      errno = 0;
+      limit = strtol(argv[i], &end, 10);
+      if ((argv[i] == end) || *end) {
+        fprintf(stderr, "Error Parsing %s\n", argv[i]);
+        return EXIT_FAILURE;
+      } else if (errno == ERANGE) {
+        perror(argv[i]);
+        return EXIT_FAILURE;
+      }
     } else {
-      fprintf(stderr, "Usage: %s <limit> [-t]\n", argv[0]);
+      fprintf(stderr, "Usage: %s <limit> [-t] [-r] [-o filename]\n", argv[0]);
       return EXIT_FAILURE;
     }
   }
-
-  char *end = argv[limit_arg_idx];
-  errno = 0;
-  const long limit = strtol(argv[limit_arg_idx], &end, 10);
-  if ((argv[limit_arg_idx] == end) || *end) {
-    fprintf(stderr, "Error Parsing %s\n", argv[limit_arg_idx]);
-    return EXIT_FAILURE;
-  } else if (errno == ERANGE) {
-    perror(argv[limit_arg_idx]);
+  
+  if (limit == -1) {
+    fprintf(stderr, "Error: Missing limit value\n");
     return EXIT_FAILURE;
   }
 
@@ -73,30 +90,79 @@ int main(int argc, char *argv[argc + 1]) {
     }
   }
 
-  if (printf("Fibonacci Number %ld: ", i) < 0) {
-    return EXIT_FAILURE;
-  }
-  if (gmp_printf("%Zd", b) < 0) {
-    return EXIT_FAILURE;
-  }
-  if (putchar('\n') == EOF) {
-    return EXIT_FAILURE;
-  }
-
-  mpz_clear(a);
-  mpz_clear(b);
-  mpz_clear(c);
-
-  if (show_time) {
-    const double time_taken =
-        ((double)(end_time - start_time)) / (double)CLOCKS_PER_SEC;
-    if (printf("Calculation Time: %lf seconds\n", time_taken) < 0) {
+  FILE *output = stdout;
+  if (output_file != NULL) {
+    output = fopen(output_file, "w");
+    if (output == NULL) {
+      perror("Error opening output file");
+      mpz_clear(a);
+      mpz_clear(b);
+      mpz_clear(c);
       return EXIT_FAILURE;
     }
   }
 
-  if (fflush(stdout) == EOF) {
+  if (!raw_output) {
+    if (fprintf(output, "Fibonacci Number %ld: ", i) < 0) {
+      if (output != stdout) fclose(output);
+      mpz_clear(a);
+      mpz_clear(b);
+      mpz_clear(c);
+      return EXIT_FAILURE;
+    }
+  }
+  
+  char *result_str = mpz_get_str(NULL, 10, b);
+  if (result_str == NULL) {
+    if (output != stdout) fclose(output);
+    mpz_clear(a);
+    mpz_clear(b);
+    mpz_clear(c);
     return EXIT_FAILURE;
   }
+  
+  if (fprintf(output, "%s\n", result_str) < 0) {
+    free(result_str);
+    if (output != stdout) fclose(output);
+    mpz_clear(a);
+    mpz_clear(b);
+    mpz_clear(c);
+    return EXIT_FAILURE;
+  }
+  
+  free(result_str);
+
+  if (show_time) {
+    const double time_taken =
+        ((double)(end_time - start_time)) / (double)CLOCKS_PER_SEC;
+    if (fprintf(output, "Calculation Time: %lf seconds\n", time_taken) < 0) {
+      if (output != stdout) fclose(output);
+      mpz_clear(a);
+      mpz_clear(b);
+      mpz_clear(c);
+      return EXIT_FAILURE;
+    }
+  }
+
+  if (output != stdout) {
+    if (fclose(output) != 0) {
+      perror("Error closing output file");
+      mpz_clear(a);
+      mpz_clear(b);
+      mpz_clear(c);
+      return EXIT_FAILURE;
+    }
+  } else {
+    if (fflush(stdout) == EOF) {
+      mpz_clear(a);
+      mpz_clear(b);
+      mpz_clear(c);
+      return EXIT_FAILURE;
+    }
+  }
+  
+  mpz_clear(a);
+  mpz_clear(b);
+  mpz_clear(c);
   return EXIT_SUCCESS;
 }
