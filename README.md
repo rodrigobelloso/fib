@@ -44,8 +44,30 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
 ./fib <number>
 
 # Calculate Fibonacci number and show its calculation time
-./fib -t <number>
+./fib <number> -t
+# or
+./fib <number> --time
+
+# Calculate Fibonacci number without the "Fibonacci Number X:" prefix
+./fib <number> -r
+# or
+./fib <number> --raw
+
+# Save the result to a file
+./fib <number> -o filename
+# or
+./fib <number> --output filename
+
+# Combining options
+./fib <number> -t -r -o result.txt
 ```
+
+## Command-line Options
+
+- `<number>`: The sequence position of the Fibonacci number to calculate
+- `-t, --time`: Show calculation time
+- `-r, --raw`: Output only the number without "Fibonacci Number X:" prefix
+- `-o, --output <filename>`: Save the result to the specified file
 
 ## License
 

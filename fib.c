@@ -21,7 +21,7 @@ int main(int argc, const char *const argv[argc + 1]) {
   char const *output_file = NULL;
 
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-t") == 0) {
+    if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
       show_time = 1;
     } else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--raw") == 0) {
       raw_output = 1;
