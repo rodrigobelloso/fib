@@ -24,7 +24,9 @@ void display_help(const char *program_name) {
 
 int main(int argc, const char *const argv[argc + 1]) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", argv[0]);
+    fprintf(stderr, 
+        "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", 
+        argv[0]);
     fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
     return EXIT_FAILURE;
   }
@@ -67,7 +69,9 @@ int main(int argc, const char *const argv[argc + 1]) {
         return EXIT_FAILURE;
       }
     } else {
-      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", argv[0]);
+        fprintf(stderr, 
+            "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", 
+            argv[0]);
       fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
       return EXIT_FAILURE;
     }
