@@ -9,7 +9,7 @@
 #include <string.h>
 #include <time.h>
 
-int main(int argc, char *argv[argc + 1]) {
+int main(int argc, char * const argv[argc + 1]) {
   if (argc < 2) {
     fprintf(stderr, "Usage: %s <limit> [-t] [-r] [-o filename]\n", argv[0]);
     return EXIT_FAILURE;
