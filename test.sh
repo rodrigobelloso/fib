@@ -15,8 +15,18 @@ run_test() {
   local test_name="$description (n=$number${options:+ }${options})"
 
   echo -n "Testing $test_name: "
+
+  local args=()
   
-  output=$(./fib $options "$number")
+  if [ -n "$options" ]; then
+    for opt in $options; do
+      args+=("$opt")
+    done
+  fi
+  
+  args+=("$number")
+  
+  output=$(./fib "${args[@]}")
   exit_code=$?
   
   if [ $exit_code -ne 0 ]; then
