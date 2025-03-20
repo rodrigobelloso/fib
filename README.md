@@ -40,7 +40,11 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
 ## Usage
 
 ```sh
+# Calculate Fibonacci number
 ./fib <number>
+
+# Calculate Fibonacci number and show its calculation time
+./fib -t <number>
 ```
 
 ## License

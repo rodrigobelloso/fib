@@ -11,11 +11,12 @@ run_test() {
   local number=$1
   local expected_result=$2
   local description=$3
-  local test_name="$description (n=$number)"
+  local options=${4:-""}
+  local test_name="$description (n=$number${options:+ }${options})"
 
   echo -n "Testing $test_name: "
   
-  output=$(./fib "$number")
+  output=$(./fib $options "$number")
   exit_code=$?
   
   if [ $exit_code -ne 0 ]; then
@@ -66,6 +67,43 @@ if run_test 100 "Fibonacci Number 100: 354224848179261915075" "Fibonacci 100"; t
 fi
 ((total_tests++))
 
+echo -e "\n=== Time flag test ==="
+echo -n "Testing with -t flag: "
+output=$(./fib -t 30)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Time flag test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Calculation Time: "; then
+    echo -e "${GREEN}SUCCESS: Time output detected${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: No time output detected${NC}"
+    failed_tests+=("Time flag test - No time output")
+  fi
+fi
+((total_tests++))
+
+echo -n "Testing with flag at the end: "
+output=$(./fib 25 -t)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Time flag at end - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Calculation Time: "; then
+    echo -e "${GREEN}SUCCESS: Time output detected${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: No time output detected${NC}"
+    failed_tests+=("Time flag at end - No time output")
+  fi
+fi
+((total_tests++))
+
 echo -e "\n=== Error handling tests ==="
 echo -n "Testing without arguments: "
 if ! ./fib >/dev/null 2>&1; then
@@ -84,6 +122,16 @@ if ! ./fib abc >/dev/null 2>&1; then
 else
   echo -e "${RED}FAILED: Program should have failed with non-numeric input${NC}"
   failed_tests+=("Non-numeric argument - Did not fail as expected")
+fi
+((total_tests++))
+
+echo -n "Testing with invalid flag usage: "
+if ! ./fib -t -x 10 >/dev/null 2>&1; then
+  echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
+  ((passed_tests++))
+else
+  echo -e "${RED}FAILED: Program should have failed with invalid flag usage${NC}"
+  failed_tests+=("Invalid flag usage - Did not fail as expected")
 fi
 ((total_tests++))
 
