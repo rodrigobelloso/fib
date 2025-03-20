@@ -9,9 +9,29 @@
 #include <string.h>
 #include <time.h>
 
+void display_help(const char *program_name) {
+  printf("\nUsage: %s <limit> [options]\n", program_name);
+  printf("\n");
+  printf("Calculate Fibonacci numbers.\n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help    Display this help message and exit.\n");
+  printf("  -t, --time    Show calculation time.\n");
+  printf("  -r, --raw     Output only the number without prefix.\n");
+  printf("  -o, --output <filename>\n");
+  printf("                Save the result to the specified file.\n");
+  printf("\n");
+  printf("Examples:\n");
+  printf("  %s 10         Calculate the 10th Fibonacci number.\n", program_name);
+  printf("  %s 100 -t     Calculate and show the time taken.\n", program_name);
+  printf("  %s 50 -r      Calculate and save raw result to a file.\n", program_name);
+  printf("\n");
+}
+
 int main(int argc, const char *const argv[argc + 1]) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <limit> [-t] [-r] [-o filename]\n", argv[0]);
+    fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", argv[0]);
+    fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
     return EXIT_FAILURE;
   }
 
@@ -21,7 +41,10 @@ int main(int argc, const char *const argv[argc + 1]) {
   char const *output_file = NULL;
 
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
+    if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+      display_help(argv[0]);
+      return EXIT_SUCCESS;
+    } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
       show_time = 1;
     } else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--raw") == 0) {
       raw_output = 1;
@@ -35,6 +58,7 @@ int main(int argc, const char *const argv[argc + 1]) {
     } else if (limit == -1) {
       if (argv[i][0] == '-' && argv[i][1] != '\0') {
         fprintf(stderr, "Unknown option: %s\n", argv[i]);
+        fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
         return EXIT_FAILURE;
       }
 
@@ -49,13 +73,15 @@ int main(int argc, const char *const argv[argc + 1]) {
         return EXIT_FAILURE;
       }
     } else {
-      fprintf(stderr, "Usage: %s <limit> [-t] [-r] [-o filename]\n", argv[0]);
+      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", argv[0]);
+      fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
       return EXIT_FAILURE;
     }
   }
 
   if (limit == -1) {
     fprintf(stderr, "Error: Missing limit value\n");
+    fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
     return EXIT_FAILURE;
   }
 

@@ -80,6 +80,42 @@ fi
 
 echo -e "\n=== Flag tests ==="
 
+echo -n "Testing with -h flag: "
+output=$(./fib -h)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Help flag test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Usage:" && echo "$output" | grep -q "Options:"; then
+    echo -e "${GREEN}SUCCESS: Help message displayed${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: No help message detected${NC}"
+    failed_tests+=("Help flag test - No help output")
+  fi
+fi
+((total_tests++))
+
+echo -n "Testing with --help flag: "
+output=$(./fib --help)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Long help flag test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Usage:" && echo "$output" | grep -q "Options:"; then
+    echo -e "${GREEN}SUCCESS: Help message displayed${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: No help message detected${NC}"
+    failed_tests+=("Long help flag test - No help output")
+  fi
+fi
+((total_tests++))
+
 echo -n "Testing with -t flag: "
 output=$(./fib -t 30)
 exit_code=$?

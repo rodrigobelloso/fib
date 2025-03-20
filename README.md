@@ -40,6 +40,11 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
 ## Usage
 
 ```sh
+# Display help information
+./fib -h
+# or
+./fib --help
+
 # Calculate Fibonacci number
 ./fib <number>
 
@@ -65,9 +70,36 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
 ## Command-line Options
 
 - `<number>`: The sequence position of the Fibonacci number to calculate
+- `-h, --help`: Display help message and exit
 - `-t, --time`: Show calculation time
 - `-r, --raw`: Output only the number without "Fibonacci Number X:" prefix
 - `-o, --output <filename>`: Save the result to the specified file
+
+## Examples
+
+1. Calculate the 50th Fibonacci number:
+
+   ```
+   ./fib 50
+   Fibonacci Number 50: 12586269025
+   ```
+
+2. Calculate and show time taken:
+
+   ```
+   ./fib 100 -t
+   Fibonacci Number 100: 354224848179261915075
+   Calculation Time: 0.000123 seconds
+   ```
+
+3. Generate raw output and save to file:
+   ```
+   ./fib 75 -r -o result.txt
+   ```
+   Contents of result.txt:
+   ```
+   2111485077978050
+   ```
 
 ## License
 
