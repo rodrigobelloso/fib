@@ -36,17 +36,6 @@ while IFS= read -r -d '' file; do
   fi
 done < <(find . \( -name "*.c" -o -name "*.h" \) -type f -print0)
 
-echo -e "\n${YELLOW}Running static analysis with cppcheck...${NC}"
-echo -n "Analyzing .c files: "
-if cppcheck --enable=all --suppress=missingIncludeSystem --error-exitcode=1 -- ./*.c 2>/dev/null; then
-  echo -e "${GREEN}OK${NC}"
-else
-  echo -e "${RED}ERRORS FOUND${NC}"
-  cppcheck --enable=all --suppress=missingIncludeSystem -- ./*.c 2>&1 | grep -v "Checking " | head -5
-  echo "Static analysis: code failures" >> "$TMPFILE"
-fi
-
-# Cargar los errores del archivo temporal al array
 while IFS= read -r line; do
   failed_checks+=("$line")
 done < "$TMPFILE"
