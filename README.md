@@ -6,7 +6,7 @@ High-precision Fibonacci number calculator implemented in C using the GMP (GNU M
 
 ## Description
 
-This program calculates Fibonacci numbers up to a specified limit using arbitrary-precision arithmetic, allowing the calculation of extremely large numbers without loss of precision. It implements three different algorithms for calculation: iterative, recursive with memoization, and matrix exponentiation.
+This program calculates Fibonacci numbers up to a specified limit using arbitrary-precision arithmetic, allowing the calculation of extremely large numbers without loss of precision. It implements three different algorithms for calculation and supports multiple output formats.
 
 ## Requirements
 
@@ -55,6 +55,13 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
 # or
 ./fib <number> --algorithm iter/recur/matrix
 
+# Choose output format
+./fib <number> -f dec      # Decimal (default)
+./fib <number> -f hex      # Hexadecimal (with 0x prefix)
+./fib <number> -f bin      # Binary (with 0b prefix)
+# or
+./fib <number> --format dec/hex/bin
+
 # Calculate Fibonacci number and show its calculation time
 ./fib <number> -t
 # or
@@ -76,7 +83,7 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
 ./fib <number> --output filename
 
 # Combining options
-./fib <number> -a matrix -t -r -v -o result.txt
+./fib <number> -a matrix -f hex -t -r -v -o result.txt
 ```
 
 ## Command-line Options
@@ -87,6 +94,10 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
   - `iter`: Iterative method (default, most efficient for general use)
   - `recur`: Recursive method with memoization (demonstrates recursion)
   - `matrix`: Matrix exponentiation method (efficient for very large numbers)
+- `-f, --format <format>`: Set output number format. Available options:
+  - `dec`: Decimal (default)
+  - `hex`: Hexadecimal (with 0x prefix)
+  - `bin`: Binary (with 0b prefix)
 - `-t, --time`: Show calculation time
 - `-r, --raw`: Output only the number without "Fibonacci Number X:" prefix
 - `-v, --verbose`: Show detailed information during calculation
@@ -98,18 +109,32 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
 
    ```
    ./fib 50
-   Fibonacci Number 50: 12586269025
+   Fibonacci Number 50 (decimal): 12586269025
    ```
 
 2. Calculate using matrix exponentiation and show time taken:
 
    ```
    ./fib 100 -a matrix -t
-   Fibonacci Number 100: 354224848179261915075
+   Fibonacci Number 100 (decimal): 354224848179261915075
    Calculation Time: 0.000098 seconds
    ```
 
-3. Compare performance between algorithms:
+3. Display result in hexadecimal format:
+
+   ```
+   ./fib 20 -f hex
+   Fibonacci Number 20 (hexadecimal): 0x1a6d
+   ```
+
+4. Display raw binary output:
+
+   ```
+   ./fib 10 -f bin -r
+   0b110111
+   ```
+
+5. Compare performance between algorithms:
 
    ```
    ./fib 30 -a iter -t
@@ -117,7 +142,7 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
    ./fib 30 -a matrix -t
    ```
 
-4. Generate raw output and save to file:
+6. Generate raw output and save to file:
 
    ```
    ./fib 75 -r -o result.txt
@@ -129,28 +154,40 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
    2111485077978050
    ```
 
-5. Calculate with verbose output:
+7. Calculate with verbose output:
 
    ```
    ./fib 100 -v -a matrix
    Initializing Fibonacci calculation for n=100
    Using matrix exponentiation algorithm
+   Output format: Decimal
    Computing matrix power 50...
    Calculation complete
    Preparing to write result
-   Converting result to string
-   Result has 21 digits
+   Converting result to decimal format
+   Result has 21 digits in decimal format
    Cleaning up memory
    Program completed successfully
-   Fibonacci Number 100: 354224848179261915075
+   Fibonacci Number 100 (decimal): 354224848179261915075
    ```
 
-6. Combining multiple options:
+8. Combining multiple options:
    ```
-   ./fib 1000 -a matrix -t -v -o big_fib.txt
+   ./fib 1000 -a matrix -f hex -t -v -o big_fib.txt
    ```
    This will calculate the 1000th Fibonacci number using matrix exponentiation,
-   with verbose output to stderr, and save the result and timing information to big_fib.txt.
+   output in hexadecimal format, with verbose output to stderr, and save the result
+   and timing information to big_fib.txt.
+
+## Output Formats
+
+The program supports three output formats:
+
+- **Decimal**: The standard base-10 representation (default)
+- **Hexadecimal**: Base-16 representation with `0x` prefix
+- **Binary**: Base-2 representation with `0b` prefix
+
+When using the `-r/--raw` flag with a non-decimal format, the appropriate prefix is still included.
 
 ## Algorithm Performance
 
