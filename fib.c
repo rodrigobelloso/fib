@@ -25,8 +25,7 @@ void display_help(const char *program_name) {
 
 int main(int argc, const char *const argv[argc + 1]) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-o filename]\n",
-            argv[0]);
+    fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-o filename]\n", argv[0]);
     fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
     return EXIT_FAILURE;
   }
@@ -72,8 +71,7 @@ int main(int argc, const char *const argv[argc + 1]) {
         return EXIT_FAILURE;
       }
     } else {
-      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-o filename]\n",
-              argv[0]);
+      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-o filename]\n", argv[0]);
       fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
       return EXIT_FAILURE;
     }
@@ -104,10 +102,10 @@ int main(int argc, const char *const argv[argc + 1]) {
     fprintf(stderr, "Starting with F(0) = 0, F(1) = 1\n");
   }
 
-  clock_t start_time = (clock_t)0;
+  clock_t start_time = (clock_t) 0;
   if (show_time) {
     start_time = clock();
-    if (start_time == (clock_t)-1) {
+    if (start_time == (clock_t) -1) {
       fprintf(stderr, "Error start_time clock()\n");
       return EXIT_FAILURE;
     }
@@ -132,10 +130,10 @@ int main(int argc, const char *const argv[argc + 1]) {
     fprintf(stderr, "Calculation complete\n");
   }
 
-  clock_t end_time = (clock_t)0;
+  clock_t end_time = (clock_t) 0;
   if (show_time) {
     end_time = clock();
-    if (end_time == (clock_t)-1) {
+    if (end_time == (clock_t) -1) {
       fprintf(stderr, "Error end_time clock()\n");
       return EXIT_FAILURE;
     }
@@ -210,8 +208,7 @@ int main(int argc, const char *const argv[argc + 1]) {
   free(result_str);
 
   if (show_time) {
-    const double time_taken =
-        ((double)(end_time - start_time)) / (double)CLOCKS_PER_SEC;
+    const double time_taken = ((double) (end_time - start_time)) / (double) CLOCKS_PER_SEC;
     if (fprintf(output, "Calculation Time: %lf seconds\n", time_taken) < 0) {
       if (output != stdout) {
         fclose(output);
