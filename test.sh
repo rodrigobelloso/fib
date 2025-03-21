@@ -52,60 +52,92 @@ total_tests=0
 passed_tests=0
 
 echo "=== Tests with known Fibonacci values ==="
-if run_test 0 "Fibonacci Number 0: 0" "Fibonacci 0"; then
+if run_test 0 "Fibonacci Number 0 (decimal): 0" "Fibonacci 0"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
-if run_test 1 "Fibonacci Number 1: 1" "Fibonacci 1"; then
+if run_test 1 "Fibonacci Number 1 (decimal): 1" "Fibonacci 1"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
-if run_test 10 "Fibonacci Number 10: 55" "Fibonacci 10"; then
+if run_test 10 "Fibonacci Number 10 (decimal): 55" "Fibonacci 10"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
-if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci 20"; then
+if run_test 20 "Fibonacci Number 20 (decimal): 6765" "Fibonacci 20"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
 echo -e "\n=== Large number test ==="
-if run_test 100 "Fibonacci Number 100: 354224848179261915075" "Fibonacci 100"; then
+if run_test 100 "Fibonacci Number 100 (decimal): 354224848179261915075" "Fibonacci 100"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
 echo -e "\n=== Algorithm tests ==="
-if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci iterative" "-a iter"; then
+if run_test 20 "Fibonacci Number 20 (decimal): 6765" "Fibonacci iterative" "-a iter"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
-if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci recursive" "-a recur"; then
+if run_test 20 "Fibonacci Number 20 (decimal): 6765" "Fibonacci recursive" "-a recur"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
-if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci matrix" "-a matrix"; then
+if run_test 20 "Fibonacci Number 20 (decimal): 6765" "Fibonacci matrix" "-a matrix"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
 echo -e "\n=== Long-form algorithm tests ==="
-if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci iterative" "--algorithm iter"; then
+if run_test 20 "Fibonacci Number 20 (decimal): 6765" "Fibonacci iterative" "--algorithm iter"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
-if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci recursive" "--algorithm recur"; then
+if run_test 20 "Fibonacci Number 20 (decimal): 6765" "Fibonacci recursive" "--algorithm recur"; then
   ((passed_tests++))
 fi
 ((total_tests++))
 
-if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci matrix" "--algorithm matrix"; then
+if run_test 20 "Fibonacci Number 20 (decimal): 6765" "Fibonacci matrix" "--algorithm matrix"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+echo -e "\n=== Format tests ==="
+if run_test 10 "Fibonacci Number 10 (hexadecimal): 0x37" "Fibonacci hex" "-f hex"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+if run_test 10 "Fibonacci Number 10 (binary): 0b110111" "Fibonacci bin" "-f bin"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+if run_test 10 "Fibonacci Number 10 (decimal): 55" "Fibonacci dec" "-f dec"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+echo -e "\n=== Format with raw tests ==="
+if run_test 10 "^55$" "Fibonacci raw dec" "-f dec -r"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+if run_test 10 "^0x37$" "Fibonacci raw hex" "-f hex -r"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+if run_test 10 "^0b110111$" "Fibonacci raw bin" "-f bin -r"; then
   ((passed_tests++))
 fi
 ((total_tests++))
@@ -275,12 +307,12 @@ if [ $exit_code -ne 0 ]; then
 else
   if [ -f "$temp_output_file" ]; then
     file_content=$(cat "$temp_output_file")
-    if echo "$file_content" | grep -q "Fibonacci Number 20: 6765"; then
+    if echo "$file_content" | grep -q "Fibonacci Number 20 (decimal): 6765"; then
       echo -e "${GREEN}SUCCESS: File output correct${NC}"
       ((passed_tests++))
     else
       echo -e "${RED}FAILED: File content incorrect${NC}"
-      echo "  Expected to contain: Fibonacci Number 20: 6765"
+      echo "  Expected to contain: Fibonacci Number 20 (decimal): 6765"
       echo "  File content: $file_content"
       failed_tests+=("Output file test - Incorrect content")
     fi
@@ -303,12 +335,12 @@ if [ $exit_code -ne 0 ]; then
 else
   if [ -f "$temp_output_file" ]; then
     file_content=$(cat "$temp_output_file")
-    if echo "$file_content" | grep -q "Fibonacci Number 20: 6765"; then
+    if echo "$file_content" | grep -q "Fibonacci Number 20 (decimal): 6765"; then
       echo -e "${GREEN}SUCCESS: File output correct${NC}"
       ((passed_tests++))
     else
       echo -e "${RED}FAILED: File content incorrect${NC}"
-      echo "  Expected to contain: Fibonacci Number 20: 6765"
+      echo "  Expected to contain: Fibonacci Number 20 (decimal): 6765"
       echo "  File content: $file_content"
       failed_tests+=("Long output file test - Incorrect content")
     fi
@@ -369,12 +401,12 @@ if [ $exit_code -ne 0 ]; then
   echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
   failed_tests+=("Algorithm with time flag test - Exit code $exit_code")
 else
-  if echo "$output" | grep -q "Fibonacci Number 15: 610" && echo "$output" | grep -q "Calculation Time:"; then
+  if echo "$output" | grep -q "Fibonacci Number 15 (decimal): 610" && echo "$output" | grep -q "Calculation Time:"; then
     echo -e "${GREEN}SUCCESS: Algorithm selection with other flags working correctly${NC}"
     ((passed_tests++))
   else
     echo -e "${RED}FAILED: Algorithm selection with other flags not working correctly${NC}"
-    echo "  Expected: Fibonacci Number 15: 610 and calculation time"
+    echo "  Expected: Fibonacci Number 15 (decimal): 610 and calculation time"
     echo "  Obtained: $output"
     failed_tests+=("Algorithm with time flag test - Incorrect output")
   fi
@@ -478,6 +510,16 @@ else
 fi
 ((total_tests++))
 
+echo -n "Testing missing argument for -f flag: "
+if ! ./fib -f >/dev/null 2>&1; then
+  echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
+  ((passed_tests++))
+else
+  echo -e "${RED}FAILED: Program should have failed with missing -f argument${NC}"
+  failed_tests+=("Missing -f argument - Did not fail as expected")
+fi
+((total_tests++))
+
 echo -n "Testing invalid algorithm name: "
 if ! ./fib -a invalid_algo 10 >/dev/null 2>&1; then
   echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
@@ -485,6 +527,16 @@ if ! ./fib -a invalid_algo 10 >/dev/null 2>&1; then
 else
   echo -e "${RED}FAILED: Program should have failed with invalid algorithm name${NC}"
   failed_tests+=("Invalid algorithm name - Did not fail as expected")
+fi
+((total_tests++))
+
+echo -n "Testing invalid format name: "
+if ! ./fib -f invalid_format 10 >/dev/null 2>&1; then
+  echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
+  ((passed_tests++))
+else
+  echo -e "${RED}FAILED: Program should have failed with invalid format name${NC}"
+  failed_tests+=("Invalid format name - Did not fail as expected")
 fi
 ((total_tests++))
 
