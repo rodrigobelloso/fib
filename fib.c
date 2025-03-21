@@ -506,14 +506,6 @@ int main(int argc, const char *const argv[argc + 1]) {
       mpz_clear(result);
       return EXIT_FAILURE;
     }
-  } else if (format != DECIMAL && !raw_output) {
-    if (fprintf(output, "%s", get_format_prefix(format)) < 0) {
-      if (output != stdout) {
-        fclose(output);
-      }
-      mpz_clear(result);
-      return EXIT_FAILURE;
-    }
   } else if (format != DECIMAL) {
     if (fprintf(output, "%s", get_format_prefix(format)) < 0) {
       if (output != stdout) {
