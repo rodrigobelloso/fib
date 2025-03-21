@@ -33,41 +33,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-shellcheck-
 
-      - name: Install shellcheck
-        if: steps.cache-shellcheck.outputs.cache-hit != 'true'
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck
+          sudo apt-get install -y shellcheck clang-format cppcheck
 
-      - name: Verify shell scripts syntax
+      - name: Run lint script
         run: |
-          echo "Running ShellCheck on shell scripts..."
-          for file in $(find . -name "*.sh" -type f); do
-            echo "Analyzing $file"
-            shellcheck "$file"
-          done
-
-      - name: Install clang-format
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-format
-
-      - name: Verify C code formatting
-        run: |
-          echo "Verifying C code format..."
-          for file in $(find . -name "*.c" -o -name "*.h" -type f); do
-            echo "Analyzing format in $file"
-            clang-format --dry-run --Werror "$file"
-          done
-
-      - name: Install cppcheck
-        run: |
-          sudo apt-get install -y cppcheck
-
-      - name: Run static analysis with cppcheck
-        run: |
-          echo "Performing static analysis of C code..."
-          cppcheck --enable=all --suppress=missingIncludeSystem --error-exitcode=1 *.c
+          chmod +x tests/lint.sh
+          cd tests && ./lint.sh
 
   build:
     needs: lint
@@ -79,6 +53,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update
           sudo apt-get install -y libgmp-dev
 
       - name: Build with Makefile
@@ -86,8 +61,8 @@ jobs:
 
       - name: Test
         run: |
-          chmod +x test.sh
-          ./test.sh
+          chmod +x tests/build.sh
+          cd tests && ./build.sh
 
   build-macos:
     needs: lint
@@ -105,5 +80,5 @@ jobs:
 
       - name: Test
         run: |
-          chmod +x test.sh
-          ./test.sh
+          chmod +x tests/build.sh
+          cd tests && ./build.sh

@@ -1,4 +1,25 @@
+---
 Language: Cpp
+BasedOnStyle: Google
+ColumnLimit: 100
+IndentWidth: 2
+ContinuationIndentWidth: 4
+SortIncludes: false
+ReflowComments: true
+AllowShortIfStatementsOnASingleLine: Never
+AlignConsecutiveMacros: AcrossEmptyLines
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+DerivePointerAlignment: false
+PointerAlignment: Right
+SpaceAfterCStyleCast: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeAssignmentOperators: true
+SpacesInCStyleCastParentheses: false
+SpaceBeforeSquareBrackets: false
+UseTab: Never
+---
+Language: C
 BasedOnStyle: Google
 ColumnLimit: 100
 IndentWidth: 2

@@ -7,6 +7,8 @@ NC='\033[0m'
 
 failed_tests=()
 
+cd ..
+
 run_test() {
   local number=$1
   local expected_result=$2
