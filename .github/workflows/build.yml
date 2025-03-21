@@ -81,8 +81,27 @@ jobs:
         run: |
           sudo apt-get install -y libgmp-dev
 
-      - name: Build
-        run: gcc -o fib fib.c -lgmp
+      - name: Build with Makefile
+        run: make
+
+      - name: Test
+        run: |
+          chmod +x test.sh
+          ./test.sh
+
+  build-macos:
+    needs: lint
+    runs-on: macos-latest
+    timeout-minutes: 3
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: brew install gmp
+
+      - name: Build with Makefile
+        run: make
 
       - name: Test
         run: |
