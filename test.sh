@@ -196,6 +196,42 @@ else
 fi
 ((total_tests++))
 
+echo -n "Testing with -v flag: "
+output=$(./fib -v 10 2>&1)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Verbose flag test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Initializing" && echo "$output" | grep -q "Calculating"; then
+    echo -e "${GREEN}SUCCESS: Verbose output detected${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: No verbose output detected${NC}"
+    failed_tests+=("Verbose flag test - No verbose output")
+  fi
+fi
+((total_tests++))
+
+echo -n "Testing with --verbose flag: "
+output=$(./fib --verbose 10 2>&1)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Long verbose flag test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Initializing" && echo "$output" | grep -q "Calculating"; then
+    echo -e "${GREEN}SUCCESS: Verbose output detected${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: No verbose output detected${NC}"
+    failed_tests+=("Long verbose flag test - No verbose output")
+  fi
+fi
+((total_tests++))
+
 echo -n "Testing with -o flag: "
 temp_output_file=$(mktemp)
 ./fib -o "$temp_output_file" 20
@@ -272,6 +308,26 @@ else
 fi
 ((total_tests++))
 
+echo -n "Testing combining flags (-t -v): "
+output=$(./fib -t -v 10 2>&1)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Combined verbose flags test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Calculation Time:" && echo "$output" | grep -q "Initializing"; then
+    echo -e "${GREEN}SUCCESS: Combined flags with verbose working correctly${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Combined flags with verbose not working correctly${NC}"
+    echo "  Expected: time output and verbose information"
+    echo "  Obtained: $output"
+    failed_tests+=("Combined verbose flags test - Incorrect output")
+  fi
+fi
+((total_tests++))
+
 echo -n "Testing with flag at the end: "
 output=$(./fib 25 -t)
 exit_code=$?
@@ -292,7 +348,7 @@ fi
 
 echo -n "Testing all flags together: "
 temp_output_file=$(mktemp)
-./fib -t -r -o "$temp_output_file" 15
+./fib -t -r -v -o "$temp_output_file" 15 2>/dev/null
 exit_code=$?
 
 if [ $exit_code -ne 0 ]; then
