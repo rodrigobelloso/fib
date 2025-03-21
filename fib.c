@@ -11,6 +11,8 @@
 
 typedef enum { ITERATIVE, RECURSIVE, MATRIX } Algorithm;
 
+typedef enum { DECIMAL, HEXADECIMAL, BINARY } OutputFormat;
+
 void display_help(const char *program_name) {
   printf("\nUsage: %s <limit> [options]\n", program_name);
   printf("\n");
@@ -22,6 +24,11 @@ void display_help(const char *program_name) {
   printf("  -r, --raw     Output only the number without prefix.\n");
   printf("  -v, --verbose Show detailed information during calculation.\n");
   printf("  -o, --output  Save the result to the specified file.\n");
+  printf("  -f, --format <format>\n");
+  printf("                Set output number format. Available options:\n");
+  printf("                  dec   - Decimal (default)\n");
+  printf("                  hex   - Hexadecimal\n");
+  printf("                  bin   - Binary\n");
   printf("  -a, --algorithm <method>\n");
   printf("                Set calculation algorithm. Available options:\n");
   printf("                  iter   - Iterative (default, most efficient)\n");
@@ -31,6 +38,8 @@ void display_help(const char *program_name) {
   printf("Examples:\n");
   printf("  %s 100                 Calculate using default algorithm\n", program_name);
   printf("  %s 50 -a matrix        Calculate using matrix exponentiation\n", program_name);
+  printf("  %s 30 -f hex           Display result in hexadecimal\n", program_name);
+  printf("  %s 20 -f bin -r        Display raw binary result\n", program_name);
   printf("  %s 30 -a recur -t      Calculate recursively and show time\n", program_name);
   printf("\n");
 }
@@ -211,9 +220,56 @@ void calculate_fibonacci_recursive(mpz_t result, long n, mpz_t *memo, int verbos
   mpz_clear(temp2);
 }
 
+char *get_formatted_result(mpz_t result, OutputFormat format, int verbose) {
+  char *result_str = NULL;
+
+  switch (format) {
+    case DECIMAL:
+      if (verbose) {
+        fprintf(stderr, "Converting result to decimal format\n");
+      }
+      result_str = mpz_get_str(NULL, 10, result);
+      break;
+
+    case HEXADECIMAL:
+      if (verbose) {
+        fprintf(stderr, "Converting result to hexadecimal format\n");
+      }
+      result_str = mpz_get_str(NULL, 16, result);
+      break;
+
+    case BINARY:
+      if (verbose) {
+        fprintf(stderr, "Converting result to binary format\n");
+      }
+      result_str = mpz_get_str(NULL, 2, result);
+      break;
+
+    default:
+      if (verbose) {
+        fprintf(stderr, "Unknown format, defaulting to decimal\n");
+      }
+      result_str = mpz_get_str(NULL, 10, result);
+  }
+
+  return result_str;
+}
+
+const char *get_format_prefix(OutputFormat format) {
+  switch (format) {
+    case HEXADECIMAL:
+      return "0x";
+    case BINARY:
+      return "0b";
+    default:
+      return "";
+  }
+}
+
 int main(int argc, const char *const argv[argc + 1]) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-a algo] [-o filename]\n", argv[0]);
+    fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-f format] [-a algo] [-o filename]\n",
+            argv[0]);
     fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
     return EXIT_FAILURE;
   }
@@ -224,6 +280,7 @@ int main(int argc, const char *const argv[argc + 1]) {
   long limit = -1;
   char const *output_file = NULL;
   Algorithm algo = ITERATIVE;
+  OutputFormat format = DECIMAL;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
@@ -235,6 +292,24 @@ int main(int argc, const char *const argv[argc + 1]) {
       raw_output = 1;
     } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
       verbose = 1;
+    } else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0) {
+      if (i + 1 < argc) {
+        i++;
+        if (strcmp(argv[i], "dec") == 0) {
+          format = DECIMAL;
+        } else if (strcmp(argv[i], "hex") == 0) {
+          format = HEXADECIMAL;
+        } else if (strcmp(argv[i], "bin") == 0) {
+          format = BINARY;
+        } else {
+          fprintf(stderr, "Error: Unknown format '%s'\n", argv[i]);
+          fprintf(stderr, "Valid options: dec, hex, bin\n");
+          return EXIT_FAILURE;
+        }
+      } else {
+        fprintf(stderr, "Error: Missing format for -f/--format option\n");
+        return EXIT_FAILURE;
+      }
     } else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--algorithm") == 0) {
       if (i + 1 < argc) {
         i++;
@@ -278,7 +353,8 @@ int main(int argc, const char *const argv[argc + 1]) {
         return EXIT_FAILURE;
       }
     } else {
-      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-a algo] [-o filename]\n", argv[0]);
+      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-f format] [-a algo] [-o filename]\n",
+              argv[0]);
       fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
       return EXIT_FAILURE;
     }
@@ -308,6 +384,18 @@ int main(int argc, const char *const argv[argc + 1]) {
         break;
       case MATRIX:
         fprintf(stderr, "Using matrix exponentiation algorithm\n");
+        break;
+    }
+
+    switch (format) {
+      case DECIMAL:
+        fprintf(stderr, "Output format: Decimal\n");
+        break;
+      case HEXADECIMAL:
+        fprintf(stderr, "Output format: Hexadecimal\n");
+        break;
+      case BINARY:
+        fprintf(stderr, "Output format: Binary\n");
         break;
     }
   }
@@ -395,7 +483,39 @@ int main(int argc, const char *const argv[argc + 1]) {
   }
 
   if (!raw_output) {
-    if (fprintf(output, "Fibonacci Number %ld: ", limit) < 0) {
+    const char *format_name;
+    switch (format) {
+      case DECIMAL:
+        format_name = "decimal";
+        break;
+      case HEXADECIMAL:
+        format_name = "hexadecimal";
+        break;
+      case BINARY:
+        format_name = "binary";
+        break;
+      default:
+        format_name = "decimal";
+    }
+
+    if (fprintf(output, "Fibonacci Number %ld (%s): %s", limit, format_name,
+                format != DECIMAL ? get_format_prefix(format) : "") < 0) {
+      if (output != stdout) {
+        fclose(output);
+      }
+      mpz_clear(result);
+      return EXIT_FAILURE;
+    }
+  } else if (format != DECIMAL && !raw_output) {
+    if (fprintf(output, "%s", get_format_prefix(format)) < 0) {
+      if (output != stdout) {
+        fclose(output);
+      }
+      mpz_clear(result);
+      return EXIT_FAILURE;
+    }
+  } else if (format != DECIMAL) {
+    if (fprintf(output, "%s", get_format_prefix(format)) < 0) {
       if (output != stdout) {
         fclose(output);
       }
@@ -404,11 +524,7 @@ int main(int argc, const char *const argv[argc + 1]) {
     }
   }
 
-  if (verbose) {
-    fprintf(stderr, "Converting result to string\n");
-  }
-
-  char *result_str = mpz_get_str(NULL, 10, result);
+  char *result_str = get_formatted_result(result, format, verbose);
   if (result_str == NULL) {
     if (output != stdout) {
       fclose(output);
@@ -419,7 +535,8 @@ int main(int argc, const char *const argv[argc + 1]) {
 
   if (verbose) {
     size_t result_len = strlen(result_str);
-    fprintf(stderr, "Result has %zu digits\n", result_len);
+    fprintf(stderr, "Result has %zu digits in %s format\n", result_len,
+            format == DECIMAL ? "decimal" : (format == HEXADECIMAL ? "hexadecimal" : "binary"));
   }
 
   if (fprintf(output, "%s\n", result_str) < 0) {
