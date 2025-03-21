@@ -78,6 +78,38 @@ if run_test 100 "Fibonacci Number 100: 354224848179261915075" "Fibonacci 100"; t
 fi
 ((total_tests++))
 
+echo -e "\n=== Algorithm tests ==="
+if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci iterative" "-a iter"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci recursive" "-a recur"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci matrix" "-a matrix"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+echo -e "\n=== Long-form algorithm tests ==="
+if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci iterative" "--algorithm iter"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci recursive" "--algorithm recur"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
+if run_test 20 "Fibonacci Number 20: 6765" "Fibonacci matrix" "--algorithm matrix"; then
+  ((passed_tests++))
+fi
+((total_tests++))
+
 echo -e "\n=== Flag tests ==="
 
 echo -n "Testing with -h flag: "
@@ -288,6 +320,7 @@ else
 fi
 ((total_tests++))
 
+echo -e "\n=== Combination tests ==="
 echo -n "Testing combining flags (-t -r): "
 output=$(./fib -t -r 20)
 exit_code=$?
@@ -328,6 +361,26 @@ else
 fi
 ((total_tests++))
 
+echo -n "Testing algorithm with other flags (-a matrix -t): "
+output=$(./fib -a matrix -t 15)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Algorithm with time flag test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Fibonacci Number 15: 610" && echo "$output" | grep -q "Calculation Time:"; then
+    echo -e "${GREEN}SUCCESS: Algorithm selection with other flags working correctly${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Algorithm selection with other flags not working correctly${NC}"
+    echo "  Expected: Fibonacci Number 15: 610 and calculation time"
+    echo "  Obtained: $output"
+    failed_tests+=("Algorithm with time flag test - Incorrect output")
+  fi
+fi
+((total_tests++))
+
 echo -n "Testing with flag at the end: "
 output=$(./fib 25 -t)
 exit_code=$?
@@ -348,7 +401,7 @@ fi
 
 echo -n "Testing all flags together: "
 temp_output_file=$(mktemp)
-./fib -t -r -v -o "$temp_output_file" 15 2>/dev/null
+./fib -a matrix -t -r -v -o "$temp_output_file" 15 2>/dev/null
 exit_code=$?
 
 if [ $exit_code -ne 0 ]; then
@@ -415,6 +468,26 @@ else
 fi
 ((total_tests++))
 
+echo -n "Testing missing argument for -a flag: "
+if ! ./fib -a >/dev/null 2>&1; then
+  echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
+  ((passed_tests++))
+else
+  echo -e "${RED}FAILED: Program should have failed with missing -a argument${NC}"
+  failed_tests+=("Missing -a argument - Did not fail as expected")
+fi
+((total_tests++))
+
+echo -n "Testing invalid algorithm name: "
+if ! ./fib -a invalid_algo 10 >/dev/null 2>&1; then
+  echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
+  ((passed_tests++))
+else
+  echo -e "${RED}FAILED: Program should have failed with invalid algorithm name${NC}"
+  failed_tests+=("Invalid algorithm name - Did not fail as expected")
+fi
+((total_tests++))
+
 echo -e "\n=== Performance test ==="
 echo "Calculating Fibonacci(1000)..."
 time ./fib 1000 >/dev/null
@@ -424,6 +497,16 @@ if [ $perf_result -eq 0 ]; then
   ((passed_tests++))
 else
   failed_tests+=("Performance test - Failed with code $perf_result")
+fi
+
+echo "Calculating Fibonacci(1000) with matrix algorithm..."
+time ./fib -a matrix 1000 >/dev/null
+perf_result=$?
+((total_tests++))
+if [ $perf_result -eq 0 ]; then
+  ((passed_tests++))
+else
+  failed_tests+=("Matrix performance test - Failed with code $perf_result")
 fi
 
 echo -e "\n=== Test Summary ==="
