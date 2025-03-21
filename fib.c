@@ -18,19 +18,21 @@ void display_help(const char *program_name) {
   printf("  -h, --help    Display this help message and exit.\n");
   printf("  -t, --time    Show calculation time.\n");
   printf("  -r, --raw     Output only the number without prefix.\n");
+  printf("  -v, --verbose Show detailed information during calculation.\n");
   printf("  -o, --output  Save the result to the specified file.\n");
   printf("\n");
 }
 
 int main(int argc, const char *const argv[argc + 1]) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", argv[0]);
+    fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-o filename]\n", argv[0]);
     fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
     return EXIT_FAILURE;
   }
 
   int show_time = 0;
   int raw_output = 0;
+  int verbose = 0;
   long limit = -1;
   char const *output_file = NULL;
 
@@ -42,6 +44,8 @@ int main(int argc, const char *const argv[argc + 1]) {
       show_time = 1;
     } else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--raw") == 0) {
       raw_output = 1;
+    } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
+      verbose = 1;
     } else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
       if (i + 1 < argc) {
         output_file = argv[++i];
@@ -67,7 +71,7 @@ int main(int argc, const char *const argv[argc + 1]) {
         return EXIT_FAILURE;
       }
     } else {
-      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-o filename]\n", argv[0]);
+      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-o filename]\n", argv[0]);
       fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
       return EXIT_FAILURE;
     }
@@ -79,10 +83,24 @@ int main(int argc, const char *const argv[argc + 1]) {
     return EXIT_FAILURE;
   }
 
+  if (verbose) {
+    fprintf(stderr, "Initializing Fibonacci calculation for n=%ld\n", limit);
+    if (raw_output) {
+      fprintf(stderr, "Raw output mode enabled\n");
+    }
+    if (output_file != NULL) {
+      fprintf(stderr, "Output will be saved to: %s\n", output_file);
+    }
+  }
+
   mpz_t a, b, c;
   mpz_init_set_ui(a, 1);
   mpz_init_set_ui(b, 0);
   mpz_init(c);
+
+  if (verbose) {
+    fprintf(stderr, "Starting with F(0) = 0, F(1) = 1\n");
+  }
 
   clock_t start_time = (clock_t) 0;
   if (show_time) {
@@ -91,14 +109,25 @@ int main(int argc, const char *const argv[argc + 1]) {
       fprintf(stderr, "Error start_time clock()\n");
       return EXIT_FAILURE;
     }
+    if (verbose) {
+      fprintf(stderr, "Started timing calculation\n");
+    }
   }
 
   long i = 0;
   while (i < limit) {
+    if (verbose && (i == 0 || (i > 0 && (i % 100 == 0 || i == limit - 1)))) {
+      fprintf(stderr, "Calculating F(%ld)...\n", i);
+    }
+    
     mpz_add(c, a, b);
     mpz_set(a, b);
     mpz_set(b, c);
     ++i;
+  }
+
+  if (verbose) {
+    fprintf(stderr, "Calculation complete\n");
   }
 
   clock_t end_time = (clock_t) 0;
@@ -108,10 +137,17 @@ int main(int argc, const char *const argv[argc + 1]) {
       fprintf(stderr, "Error end_time clock()\n");
       return EXIT_FAILURE;
     }
+    if (verbose) {
+      fprintf(stderr, "Finished timing calculation\n");
+    }
   }
 
   FILE *output = stdout;
   if (output_file != NULL) {
+    if (verbose) {
+      fprintf(stderr, "Opening output file: %s\n", output_file);
+    }
+    
     output = fopen(output_file, "w");
     if (output == NULL) {
       perror("Error opening output file");
@@ -120,6 +156,10 @@ int main(int argc, const char *const argv[argc + 1]) {
       mpz_clear(c);
       return EXIT_FAILURE;
     }
+  }
+
+  if (verbose) {
+    fprintf(stderr, "Preparing to write result\n");
   }
 
   if (!raw_output) {
@@ -134,6 +174,10 @@ int main(int argc, const char *const argv[argc + 1]) {
     }
   }
 
+  if (verbose) {
+    fprintf(stderr, "Converting result to string\n");
+  }
+
   char *result_str = mpz_get_str(NULL, 10, b);
   if (result_str == NULL) {
     if (output != stdout) {
@@ -143,6 +187,11 @@ int main(int argc, const char *const argv[argc + 1]) {
     mpz_clear(b);
     mpz_clear(c);
     return EXIT_FAILURE;
+  }
+
+  if (verbose) {
+    size_t result_len = strlen(result_str);
+    fprintf(stderr, "Result has %zu digits\n", result_len);
   }
 
   if (fprintf(output, "%s\n", result_str) < 0) {
@@ -169,9 +218,17 @@ int main(int argc, const char *const argv[argc + 1]) {
       mpz_clear(c);
       return EXIT_FAILURE;
     }
+    
+    if (verbose) {
+      fprintf(stderr, "Time taken for calculation: %lf seconds\n", time_taken);
+    }
   }
 
   if (output != stdout) {
+    if (verbose) {
+      fprintf(stderr, "Closing output file\n");
+    }
+    
     if (fclose(output) != 0) {
       perror("Error closing output file");
       mpz_clear(a);
@@ -188,8 +245,17 @@ int main(int argc, const char *const argv[argc + 1]) {
     }
   }
 
+  if (verbose) {
+    fprintf(stderr, "Cleaning up memory\n");
+  }
+
   mpz_clear(a);
   mpz_clear(b);
   mpz_clear(c);
+  
+  if (verbose) {
+    fprintf(stderr, "Program completed successfully\n");
+  }
+  
   return EXIT_SUCCESS;
 }
