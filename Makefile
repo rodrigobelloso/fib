@@ -4,23 +4,29 @@ LIBS = -lgmp
 
 SRC = fib.c algorithms.c matrix.c utils.c
 OBJ = $(SRC:.c=.o)
+DEP = $(SRC:.c=.d)
 TARGET = fib
 
 UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Darwin)
-    HOMEBREW_PREFIX := $(shell brew --prefix 2>/dev/null || echo "/opt/homebrew")
-    CFLAGS = $(BASE_CFLAGS) -I$(HOMEBREW_PREFIX)/include
-    LDFLAGS = -L$(HOMEBREW_PREFIX)/lib
+	HOMEBREW_PREFIX := $(shell brew --prefix 2>/dev/null || echo "/opt/homebrew")
+	CFLAGS = $(BASE_CFLAGS) -I$(HOMEBREW_PREFIX)/include
+	LDFLAGS = -L$(HOMEBREW_PREFIX)/lib
 endif
 
 ifeq ($(UNAME_S),Linux)
-    CFLAGS = $(BASE_CFLAGS)
-    LDFLAGS =
+	CFLAGS = $(BASE_CFLAGS)
+	LDFLAGS =
 endif
 
 ifndef CFLAGS
-    CFLAGS = $(BASE_CFLAGS)
+	CFLAGS = $(BASE_CFLAGS)
+endif
+
+ifdef DEBUG
+	CFLAGS += -g -DDEBUG
+	LDFLAGS += -g
 endif
 
 all: $(TARGET)
@@ -28,14 +34,16 @@ all: $(TARGET)
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-%.o: %.c fib.h
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o: %.c
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+-include $(DEP)
 
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(OBJ) $(DEP) $(TARGET)
 
 cleanobj:
-	rm -f $(OBJ)
+	rm -f $(OBJ) $(DEP)
 
 install-deps:
 ifeq ($(UNAME_S),Darwin)
@@ -52,4 +60,15 @@ else
 	@exit 1
 endif
 
-.PHONY: all clean cleanobj install-deps
+debug:
+	$(MAKE) DEBUG=1
+
+rebuild: clean all
+
+test: all
+	@echo "Running tests..."
+	./$(TARGET) 10
+	./$(TARGET) 20 -a matrix -t
+	@echo "Tests completed"
+
+.PHONY: all clean cleanobj install-deps debug rebuild test
