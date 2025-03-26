@@ -2,42 +2,78 @@
 
 # fib
 
-High-precision Fibonacci number calculator implemented in C using the GMP (GNU Multiple Precision Arithmetic) library.
+A high precision Fibonacci number calculator implemented in C using the GMP (GNU Multiple Precision Arithmetic) library.
 
-## Description
+## Description:
 
-This program calculates Fibonacci numbers up to a specified limit using arbitrary-precision arithmetic, allowing the calculation of extremely large numbers without loss of precision. It implements three different algorithms for calculation and supports multiple output formats.
+fib calculates Fibonacci numbers up to a specified limit using arbitrary-precision arithmetic, allowing the calculation of extremely large numbers without loss of precision. It implements three different algorithms for calculation and supports multiple output formats.
 
-## Requirements
+## Requirements:
 
 - C compiler supporting C99 or higher
 - GMP library (GNU Multiple Precision Arithmetic)
+- Make (for easier compilation)
 
-## Installation
+## Installation of Dependencies:
 
-1. Install GMP if not already installed:
+### Automatically:
+
+fib includes a make file to install required dependencies:
 
 ```sh
-# Debian based distros
-apt-get install libgmp-dev
+make install-deps
+```
 
-# macOS
+### Manually:
+
+Install dependencies manually by executing:
+
+```sh
+# On Debian/Ubuntu based systems
+apt install libgmp-dev
+
+# On Fedora based distros
+dnf install gmp
+
+# On macOS with Homebrew
 brew install gmp
 ```
 
-## Compiling
+## Building from source:
+
+### Automatically:
+
+fib uses a `makefile` for easier compilation:
 
 ```sh
-# Debian based distros
-gcc -o fib fib.c -lgmp
-clang -o fib fib.c -lgmp
+# Build the project
+make
 
-# macOS
-gcc fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
-clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
+# Clean object files and executables
+make clean
+
+# Clean only object files
+make cleanobj
 ```
 
-## Usage
+_The `makefile` will automatically detect your platform and will adjust the path for GMP accordingly._
+
+### Manually:
+
+Build fib manually by executing `gcc` or `clang` in the following manner:
+
+```sh
+# Debian/Ubuntu based distros
+gcc -o fib fib.c algorithms.c matrix.c utils.c -lgmp
+
+# Fedora based distros
+gcc -o fib fib.c algorithms.c matrix.c utils.c -gmp
+
+# macOS systems
+gcc fib.c algorithms.c matrix.c utils.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
+```
+
+## Usage:
 
 ```sh
 # Display help information
@@ -86,115 +122,74 @@ clang fib.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
 ./fib <number> -a matrix -f hex -t -r -v -o result.txt
 ```
 
-## Command-line Options
+## Examples:
 
-- `<number>`: The sequence position of the Fibonacci number to calculate
-- `-h, --help`: Display help message and exit
-- `-a, --algorithm <method>`: Set calculation algorithm. Available options:
-  - `iter`: Iterative method (default, most efficient for general use)
-  - `recur`: Recursive method with memoization (demonstrates recursion)
-  - `matrix`: Matrix exponentiation method (efficient for very large numbers)
-- `-f, --format <format>`: Set output number format. Available options:
-  - `dec`: Decimal (default)
-  - `hex`: Hexadecimal (with 0x prefix)
-  - `bin`: Binary (with 0b prefix)
-- `-t, --time`: Show calculation time
-- `-r, --raw`: Output only the number without "Fibonacci Number X:" prefix
-- `-v, --verbose`: Show detailed information during calculation
-- `-o, --output <filename>`: Save the result to the specified file
+Calculate the 50th Fibonacci number:
 
-## Examples
+```sh
+./fib 50
+```
 
-1. Calculate the 50th Fibonacci number:
+Calculate using matrix exponentiation and show time taken:
 
-   ```
-   ./fib 50
-   Fibonacci Number 50 (decimal): 12586269025
-   ```
+```sh
+./fib 100 -a matrix -t
+```
 
-2. Calculate using matrix exponentiation and show time taken:
+Display result in hexadecimal format:
 
-   ```
-   ./fib 100 -a matrix -t
-   Fibonacci Number 100 (decimal): 354224848179261915075
-   Calculation Time: 0.000098 seconds
-   ```
+```sh
+./fib 20 -f hex
+```
 
-3. Display result in hexadecimal format:
+Display raw binary output:
 
-   ```
-   ./fib 20 -f hex
-   Fibonacci Number 20 (hexadecimal): 0x1a6d
-   ```
+```sh
+./fib 10 -f bin -r
+```
 
-4. Display raw binary output:
+Compare performance between algorithms:
 
-   ```
-   ./fib 10 -f bin -r
-   0b110111
-   ```
+```sh
+./fib 30 -a iter -t
+./fib 30 -a recur -t
+./fib 30 -a matrix -t
+```
 
-5. Compare performance between algorithms:
+Generate raw output and save to file:
 
-   ```
-   ./fib 30 -a iter -t
-   ./fib 30 -a recur -t
-   ./fib 30 -a matrix -t
-   ```
+```sh
+./fib 75 -r -o result.txt
+```
 
-6. Generate raw output and save to file:
+Calculate with verbose output:
 
-   ```
-   ./fib 75 -r -o result.txt
-   ```
+```sh
+./fib 100 -v -a matrix
+```
 
-   Contents of result.txt:
+Combining multiple options:
 
-   ```
-   2111485077978050
-   ```
+```sh
+./fib 1000 -a matrix -f hex -t -v -o res.txt
+```
 
-7. Calculate with verbose output:
+## Output formats:
 
-   ```
-   ./fib 100 -v -a matrix
-   Initializing Fibonacci calculation for n=100
-   Using matrix exponentiation algorithm
-   Output format: Decimal
-   Computing matrix power 50...
-   Calculation complete
-   Preparing to write result
-   Converting result to decimal format
-   Result has 21 digits in decimal format
-   Cleaning up memory
-   Program completed successfully
-   Fibonacci Number 100 (decimal): 354224848179261915075
-   ```
+fib supports three output formats:
 
-8. Combining multiple options:
-   ```
-   ./fib 1000 -a matrix -f hex -t -v -o big_fib.txt
-   ```
-   This will calculate the 1000th Fibonacci number using matrix exponentiation,
-   output in hexadecimal format, with verbose output to stderr, and save the result
-   and timing information to big_fib.txt.
+- Decimal: The standard base-10 representation. (default)
+- Hexadecimal: Base-16 representation with 0x prefix.
+- Binary: Base-2 representation with 0b prefix.
 
-## Output Formats
+_When using the -r/--raw flag with a non-decimal format, the appropriate prefix is still included._
 
-The program supports three output formats:
+## Algorithm performance:
 
-- **Decimal**: The standard base-10 representation (default)
-- **Hexadecimal**: Base-16 representation with `0x` prefix
-- **Binary**: Base-2 representation with `0b` prefix
+- Iterative: O(n) time complexity, O(1) space complexity. Best for general use.
+- Recursive with Memoization: O(n) time complexity, O(n) space complexity. Demonstrates dynamic programming.
+- Matrix Exponentiation: O(log n) time complexity, O(1) space complexity. Most efficient for very large values of n.
 
-When using the `-r/--raw` flag with a non-decimal format, the appropriate prefix is still included.
+## License:
 
-## Algorithm Performance
-
-- **Iterative**: O(n) time complexity, O(1) space complexity. Best for general use.
-- **Recursive with Memoization**: O(n) time complexity, O(n) space complexity. Demonstrates dynamic programming.
-- **Matrix Exponentiation**: O(log n) time complexity, O(1) space complexity. Most efficient for very large values of n.
-
-## License
-
-fib is under the [GNU GENERAL PUBLIC LICENSE 3](./LICENSE).
+fib is licensed under the [GPL-3.0](./LICENSE).
