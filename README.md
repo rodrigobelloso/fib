@@ -51,6 +51,15 @@ make clean
 
 # Clean only object files
 make cleanobj
+
+# Build with debug information
+make debug
+
+# Rebuild the project (clean and then build)
+make rebuild
+
+# Run basic tests
+make test
 ```
 
 _The `makefile` will automatically detect your platform and will adjust the path for GMP accordingly._
