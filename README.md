@@ -1,4 +1,4 @@
-[![GitHub Actions tests](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml) [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![GitHub Actions tests](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml) [![GitHub License](https://img.shields.io/badge/License-GPL_3.0-yellow.svg)](./LICENSE)
 
 # fib
 
@@ -32,9 +32,6 @@ Install dependencies manually by executing:
 # On Debian/Ubuntu based systems
 apt install libgmp-dev
 
-# On Fedora based distros
-dnf install gmp
-
 # On macOS with Homebrew
 brew install gmp
 ```
@@ -65,9 +62,6 @@ Build fib manually by executing `gcc` or `clang` in the following manner:
 ```sh
 # Debian/Ubuntu based distros
 gcc -o fib fib.c algorithms.c matrix.c utils.c -lgmp
-
-# Fedora based distros
-gcc -o fib fib.c algorithms.c matrix.c utils.c -gmp
 
 # macOS systems
 gcc fib.c algorithms.c matrix.c utils.c -o fib -I/opt/homebrew/include -L/opt/homebrew/lib -lgmp
@@ -171,7 +165,7 @@ Calculate with verbose output:
 Combining multiple options:
 
 ```sh
-./fib 1000 -a matrix -f hex -t -v -o res.txt
+./fib 1000 -a matrix -f hex -t -r -v -o res.txt
 ```
 
 ## Output formats:
