@@ -11,7 +11,7 @@
 
 int main(int argc, char *argv[]) {
   int free_args = 0;
-  
+
   if (argc < 2) {
     run_user_interface(&argc, &argv);
     free_args = 1;
@@ -28,7 +28,8 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       display_help(argv[0]);
-      if (free_args) free_generated_args(argc, argv);
+      if (free_args)
+        free_generated_args(argc, argv);
       return EXIT_SUCCESS;
     } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
       show_time = 1;
@@ -48,12 +49,14 @@ int main(int argc, char *argv[]) {
         } else {
           fprintf(stderr, "Error: Unknown format '%s'\n", argv[i]);
           fprintf(stderr, "Valid options: dec, hex, bin\n");
-          if (free_args) free_generated_args(argc, argv);
+          if (free_args)
+            free_generated_args(argc, argv);
           return EXIT_FAILURE;
         }
       } else {
         fprintf(stderr, "Error: Missing format for -f/--format option\n");
-        if (free_args) free_generated_args(argc, argv);
+        if (free_args)
+          free_generated_args(argc, argv);
         return EXIT_FAILURE;
       }
     } else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--algorithm") == 0) {
@@ -68,12 +71,14 @@ int main(int argc, char *argv[]) {
         } else {
           fprintf(stderr, "Error: Unknown algorithm '%s'\n", argv[i]);
           fprintf(stderr, "Valid options: iter, recur, matrix\n");
-          if (free_args) free_generated_args(argc, argv);
+          if (free_args)
+            free_generated_args(argc, argv);
           return EXIT_FAILURE;
         }
       } else {
         fprintf(stderr, "Error: Missing algorithm for -a/--algorithm option\n");
-        if (free_args) free_generated_args(argc, argv);
+        if (free_args)
+          free_generated_args(argc, argv);
         return EXIT_FAILURE;
       }
     } else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
@@ -81,14 +86,16 @@ int main(int argc, char *argv[]) {
         output_file = argv[++i];
       } else {
         fprintf(stderr, "Error: Missing filename for -o/--output option\n");
-        if (free_args) free_generated_args(argc, argv);
+        if (free_args)
+          free_generated_args(argc, argv);
         return EXIT_FAILURE;
       }
     } else if (limit == -1) {
       if (argv[i][0] == '-' && argv[i][1] != '\0') {
         fprintf(stderr, "Unknown option: %s\n", argv[i]);
         fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
-        if (free_args) free_generated_args(argc, argv);
+        if (free_args)
+          free_generated_args(argc, argv);
         return EXIT_FAILURE;
       }
 
@@ -97,18 +104,21 @@ int main(int argc, char *argv[]) {
       limit = strtol(argv[i], &end, 10);
       if ((argv[i] == end) || *end) {
         fprintf(stderr, "Error Parsing %s\n", argv[i]);
-        if (free_args) free_generated_args(argc, argv);
+        if (free_args)
+          free_generated_args(argc, argv);
         return EXIT_FAILURE;
       } else if (errno == ERANGE) {
         perror(argv[i]);
-        if (free_args) free_generated_args(argc, argv);
+        if (free_args)
+          free_generated_args(argc, argv);
         return EXIT_FAILURE;
       }
     } else {
       fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-f format] [-a algo] [-o filename]\n",
               argv[0]);
       fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
-      if (free_args) free_generated_args(argc, argv);
+      if (free_args)
+        free_generated_args(argc, argv);
       return EXIT_FAILURE;
     }
   }
@@ -116,7 +126,8 @@ int main(int argc, char *argv[]) {
   if (limit == -1) {
     fprintf(stderr, "Error: Missing limit value\n");
     fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
-    if (free_args) free_generated_args(argc, argv);
+    if (free_args)
+      free_generated_args(argc, argv);
     return EXIT_FAILURE;
   }
 
