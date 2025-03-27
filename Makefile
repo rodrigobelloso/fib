@@ -2,7 +2,7 @@ CC = gcc
 BASE_CFLAGS = -Wall -Wextra -Werror -pedantic -std=c99 -O2
 LIBS = -lgmp
 
-SRC = fib.c algorithms.c matrix.c utils.c
+SRC = fib.c algorithms.c matrix.c utils.c ui.c
 OBJ = $(SRC:.c=.o)
 DEP = $(SRC:.c=.d)
 TARGET = fib

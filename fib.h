@@ -20,4 +20,7 @@ void display_help(const char *program_name);
 char *get_formatted_result(mpz_t result, OutputFormat format, int verbose);
 const char *get_format_prefix(OutputFormat format);
 
+void run_user_interface(int *argc, char ***argv);
+void free_generated_args(int argc, char **argv);
+
 #endif

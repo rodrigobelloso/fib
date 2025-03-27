@@ -144,6 +144,40 @@ if run_test 10 "^0b110111$" "Fibonacci raw bin" "-f bin -r"; then
 fi
 ((total_tests++))
 
+echo -e "\n=== Interactive mode test ==="
+echo -n "Testing interactive mode simulation: "
+
+cat > test_input.txt << EOF
+10
+n
+n
+y
+n
+n
+
+EOF
+
+output=$(cat test_input.txt | ./fib 2>&1)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code in interactive mode${NC}"
+  failed_tests+=("Interactive mode - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Fibonacci Number 10 (decimal): 55"; then
+    echo -e "${GREEN}SUCCESS: Interactive mode worked correctly${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Interactive mode did not produce expected output${NC}"
+    echo "  Expected to contain: Fibonacci Number 10 (decimal): 55"
+    echo "  Output contains: $(echo "$output" | grep -o "Fibonacci Number.*" | head -1)"
+    failed_tests+=("Interactive mode - Incorrect output")
+  fi
+fi
+((total_tests++))
+
+rm -f test_input.txt
+
 echo -e "\n=== Flag tests ==="
 
 echo -n "Testing with -h flag: "
@@ -462,16 +496,6 @@ fi
 ((total_tests++))
 
 echo -e "\n=== Error handling tests ==="
-echo -n "Testing without arguments: "
-if ! ./fib >/dev/null 2>&1; then
-  echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
-  ((passed_tests++))
-else
-  echo -e "${RED}FAILED: Program should have failed without arguments${NC}"
-  failed_tests+=("No arguments - Did not fail as expected")
-fi
-((total_tests++))
-
 echo -n "Testing with non-numeric argument: "
 if ! ./fib abc >/dev/null 2>&1; then
   echo -e "${GREEN}SUCCESS: Program correctly detected the error${NC}"
