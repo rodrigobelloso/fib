@@ -157,7 +157,7 @@ n
 
 EOF
 
-output=$(cat test_input.txt | ./fib 2>&1)
+output=$(./fib < test_input.txt 2>&1)
 exit_code=$?
 
 if [ $exit_code -ne 0 ]; then
