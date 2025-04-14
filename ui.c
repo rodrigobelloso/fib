@@ -158,7 +158,7 @@ static char *get_filename(const char *prompt, int allow_empty) {
 }
 
 void run_user_interface(int *argc, char ***argv) {
-  printf("\n===== Fibonacci Number Calculator =====\n\n");
+  printf("\n===== fib =====\n\n");
 
   long fib_number = get_long_input("Enter the Fibonacci number to calculate", 0, 1000000);
 
