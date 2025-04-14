@@ -1,3 +1,7 @@
+#define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+
 #include "fib.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,6 +10,15 @@
 #include <errno.h>
 
 #define MAX_INPUT_SIZE 100
+
+static char *my_strdup(const char *str) {
+  size_t len = strlen(str) + 1;
+  char *new_str = malloc(len);
+  if (new_str) {
+    memcpy(new_str, str, len);
+  }
+  return new_str;
+}
 
 static long get_long_input(const char *prompt, long min_value, long max_value) {
   char input[MAX_INPUT_SIZE];
@@ -95,7 +108,7 @@ static char *get_string_option(const char *prompt, const char *valid_options[], 
     }
   } while (!valid);
 
-  return strdup(valid_options[option_index]);
+  return my_strdup(valid_options[option_index]);
 }
 
 static int get_yes_no(const char *prompt, int default_value) {
@@ -154,7 +167,7 @@ static char *get_filename(const char *prompt, int allow_empty) {
     valid = 1;
   } while (!valid);
 
-  return strdup(input);
+  return my_strdup(input);
 }
 
 void run_user_interface(int *argc, char ***argv) {
@@ -164,7 +177,7 @@ void run_user_interface(int *argc, char ***argv) {
 
   const char *algorithm_options[] = {"iter", "recur", "matrix"};
   printf("Algorithm: 'iter' is the default\n");
-  char *algorithm = strdup("iter");
+  char *algorithm = my_strdup("iter");
   printf("Selected algorithm: %s\n", algorithm);
 
   if (get_yes_no("Do you want to change the algorithm?", 0)) {
@@ -174,7 +187,7 @@ void run_user_interface(int *argc, char ***argv) {
 
   const char *format_options[] = {"dec", "hex", "bin"};
   printf("Format: 'dec' is the default\n");
-  char *format = strdup("dec");
+  char *format = my_strdup("dec");
   printf("Selected format: %s\n", format);
 
   if (get_yes_no("Do you want to change the output format?", 0)) {
@@ -210,34 +223,34 @@ void run_user_interface(int *argc, char ***argv) {
     exit(EXIT_FAILURE);
   }
 
-  new_argv[0] = strdup((*argv)[0]);
+  new_argv[0] = my_strdup((*argv)[0]);
 
   char number_str[32];
   sprintf(number_str, "%ld", fib_number);
-  new_argv[1] = strdup(number_str);
+  new_argv[1] = my_strdup(number_str);
 
   int arg_index = 2;
 
   if (strcmp(algorithm, "iter") != 0) {
-    new_argv[arg_index++] = strdup("-a");
-    new_argv[arg_index++] = strdup(algorithm);
+    new_argv[arg_index++] = my_strdup("-a");
+    new_argv[arg_index++] = my_strdup(algorithm);
   }
 
   if (strcmp(format, "dec") != 0) {
-    new_argv[arg_index++] = strdup("-f");
-    new_argv[arg_index++] = strdup(format);
+    new_argv[arg_index++] = my_strdup("-f");
+    new_argv[arg_index++] = my_strdup(format);
   }
 
   if (show_time)
-    new_argv[arg_index++] = strdup("-t");
+    new_argv[arg_index++] = my_strdup("-t");
   if (raw_output)
-    new_argv[arg_index++] = strdup("-r");
+    new_argv[arg_index++] = my_strdup("-r");
   if (verbose)
-    new_argv[arg_index++] = strdup("-v");
+    new_argv[arg_index++] = my_strdup("-v");
 
   if (output_file) {
-    new_argv[arg_index++] = strdup("-o");
-    new_argv[arg_index++] = strdup(output_file);
+    new_argv[arg_index++] = my_strdup("-o");
+    new_argv[arg_index++] = my_strdup(output_file);
     free(output_file);
   }
 
