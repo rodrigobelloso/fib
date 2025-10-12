@@ -3,6 +3,8 @@
 #endif
 
 #define _POSIX_C_SOURCE 200809L
+#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 
 #include "fib.h"
 #include <errno.h>
@@ -14,6 +16,11 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+
+// Define O_NOFOLLOW if not available (for security)
+#ifndef O_NOFOLLOW
+#define O_NOFOLLOW 0
+#endif
 
 static char *validate_output_path(const char *path) {
   if (path == NULL || path[0] == '\0') {
@@ -379,8 +386,9 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Opening output file: %s\n", output_file);
     }
 
-    // Use open() with O_CREAT to safely create the file
-    int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    // Use open() with O_CREAT | O_NOFOLLOW to safely create the file
+    // O_NOFOLLOW prevents following symlinks, mitigating TOCTOU attacks
+    int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
     if (fd == -1) {
       perror("Error opening output file");
       mpz_clear(result);
