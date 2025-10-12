@@ -90,14 +90,43 @@ static void cleanup_resources(char *output_file, int free_args, int argc, char *
   }
 }
 
+/**
+ * Main entry point for the Fibonacci calculator program.
+ *
+ * This program calculates Fibonacci numbers using various algorithms and can output
+ * results in different formats (decimal, hexadecimal, binary). It supports both
+ * command-line arguments and an interactive user interface mode.
+ *
+ * argc The number of command-line arguments
+ * argv Array of command-line argument strings
+ * EXIT_SUCCESS on successful completion, EXIT_FAILURE on error
+ *
+ * Command-line usage:
+ *   fib <n> [options]
+ *
+ * Options:
+ *   -h, --help              Display help information
+ *   -t, --time              Show calculation time
+ *   -T, --time-only         Show only calculation time (skip result)
+ *   -r, --raw               Show only the raw number without labels
+ *   -v, --verbose           Show detailed calculation information
+ *   -f, --format <fmt>      Output format: dec, hex, or bin (default: dec)
+ *   -a, --algorithm <algo>  Algorithm: iter, recur, or matrix (default: iter)
+ *   -o, --output <file>     Write output to file instead of stdout
+ *
+ * If no arguments are provided, launches an interactive user interface.
+ */
 int main(int argc, char *argv[]) {
+  // Track whether we need to free dynamically generated arguments
   int free_args = 0;
 
+  // Step 1: Launch interactive UI if no command-line arguments provided
   if (argc < 2) {
     run_user_interface(&argc, &argv);
     free_args = 1;
   }
 
+  // Step 2: Initialize configuration variables with defaults
   int show_time = 0;
   int time_only = 0;
   int raw_output = 0;
@@ -107,21 +136,30 @@ int main(int argc, char *argv[]) {
   Algorithm algo = ITERATIVE;
   OutputFormat format = DECIMAL;
 
+  // Step 3: Parse command-line arguments
+  // Process each argument to configure program behavior
   for (int i = 1; i < argc; i++) {
+    // Handle help option
     if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       display_help(argv[0]);
       cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_SUCCESS;
-    } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
+    }
+    // Handle timing options
+    else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
       show_time = 1;
     } else if (strcmp(argv[i], "-T") == 0 || strcmp(argv[i], "--time-only") == 0) {
       time_only = 1;
       show_time = 1;
-    } else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--raw") == 0) {
+    }
+    // Handle output display options
+    else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--raw") == 0) {
       raw_output = 1;
     } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
       verbose = 1;
-    } else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0) {
+    }
+    // Handle output format option
+    else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0) {
       if (i + 1 < argc) {
         char const *format_arg = argv[++i];
         if (strcmp(format_arg, "dec") == 0) {
@@ -141,7 +179,9 @@ int main(int argc, char *argv[]) {
         cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
-    } else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--algorithm") == 0) {
+    }
+    // Handle algorithm selection option
+    else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--algorithm") == 0) {
       if (i + 1 < argc) {
         char const *algo_arg = argv[++i];
         if (strcmp(algo_arg, "iter") == 0) {
@@ -161,7 +201,9 @@ int main(int argc, char *argv[]) {
         cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
-    } else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
+    }
+    // Handle output file option
+    else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
       if (i + 1 < argc) {
         char *validated_path = validate_output_path(argv[++i]);
         if (validated_path == NULL) {
@@ -174,7 +216,10 @@ int main(int argc, char *argv[]) {
         cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
-    } else if (limit == -1) {
+    }
+    // Handle the Fibonacci number argument (non-option argument)
+    else if (limit == -1) {
+      // Check for unknown options (arguments starting with -)
       if (argv[i][0] == '-' && argv[i][1] != '\0') {
         fprintf(stderr, "Unknown option: %s\n", argv[i]);
         fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
@@ -182,6 +227,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
       }
 
+      // Parse the Fibonacci number from the argument
       char *end;
       errno = 0;
       limit = strtol(argv[i], &end, 10);
@@ -194,7 +240,9 @@ int main(int argc, char *argv[]) {
         cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
-    } else {
+    }
+    // Handle unexpected extra arguments
+    else {
       fprintf(stderr,
               "Usage: %s <limit> [-h] [-t] [-T] [-r] [-v] [-f format] [-a algo] [-o filename]\n",
               argv[0]);
@@ -204,6 +252,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Step 4: Validate that the required Fibonacci number was provided
   if (limit == -1) {
     fprintf(stderr, "Error: Missing limit value\n");
     fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
@@ -211,6 +260,7 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Step 5: Display verbose information about the configuration
   if (verbose) {
     fprintf(stderr, "Initializing Fibonacci calculation for n=%ld\n", limit);
     if (raw_output) {
@@ -220,6 +270,7 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Output will be saved to: %s\n", output_file);
     }
 
+    // Display selected algorithm
     switch (algo) {
       case ITERATIVE:
         fprintf(stderr, "Using iterative algorithm\n");
@@ -232,6 +283,7 @@ int main(int argc, char *argv[]) {
         break;
     }
 
+    // Display selected output format
     switch (format) {
       case DECIMAL:
         fprintf(stderr, "Output format: Decimal\n");
@@ -245,9 +297,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Step 6: Initialize the GMP big integer for storing the result
   mpz_t result;
   mpz_init(result);
 
+  // Step 7: Start timing if requested
   clock_t start_time = (clock_t) 0;
   if (show_time) {
     start_time = clock();
@@ -262,27 +316,32 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Step 8: Execute the selected Fibonacci calculation algorithm
   switch (algo) {
     case ITERATIVE:
       calculate_fibonacci_iterative(result, limit, verbose);
       break;
     case RECURSIVE:
+      // Warn user about potential inefficiency for large values
       if (limit > 1000000) {
         fprintf(stderr, "Warning: Recursive method may be inefficient for n > 1000000\n");
       }
       {
+        // Allocate memoization array for recursive calculation
         mpz_t *memo = (mpz_t *) malloc((limit + 1) * sizeof(mpz_t));
         if (memo == NULL) {
           fprintf(stderr, "Error: Memory allocation failed\n");
           return EXIT_FAILURE;
         }
 
+        // Initialize all memo array elements
         for (long j = 0; j <= limit; j++) {
           mpz_init(memo[j]);
         }
 
         calculate_fibonacci_recursive(result, limit, memo, verbose);
 
+        // Clean up memo array
         for (long j = 0; j <= limit; j++) {
           mpz_clear(memo[j]);
         }
@@ -298,6 +357,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Calculation complete\n");
   }
 
+  // Step 9: Stop timing if requested
   clock_t end_time = (clock_t) 0;
   if (show_time) {
     end_time = clock();
@@ -312,12 +372,14 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Step 10: Open the output destination (file or stdout)
   FILE *output = stdout;
   if (output_file != NULL) {
     if (verbose) {
       fprintf(stderr, "Opening output file: %s\n", output_file);
     }
 
+    // Use open() with O_CREAT to safely create the file
     int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd == -1) {
       perror("Error opening output file");
@@ -326,6 +388,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
 
+    // Convert file descriptor to FILE* stream
     output = fdopen(fd, "w");
     if (output == NULL) {
       perror("Error creating file stream");
@@ -340,7 +403,10 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Preparing to write result\n");
   }
 
+  // Step 11: Write the result to the output destination
+  // Only write the result if time_only mode is not enabled
   if (!time_only) {
+    // Write formatted label unless in raw output mode
     if (!raw_output) {
       const char *format_name;
       switch (format) {
@@ -366,7 +432,9 @@ int main(int argc, char *argv[]) {
         cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
-    } else if (format != DECIMAL) {
+    }
+    // In raw mode, only write the format prefix if not decimal
+    else if (format != DECIMAL) {
       if (fprintf(output, "%s", get_format_prefix(format)) < 0) {
         if (output != stdout) {
           fclose(output);
@@ -377,6 +445,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    // Convert result to the requested format and write it
     char *result_str = get_formatted_result(result, format, verbose);
     if (result_str == NULL) {
       if (output != stdout) {
@@ -406,6 +475,7 @@ int main(int argc, char *argv[]) {
     free(result_str);
   }
 
+  // Step 12: Write timing information if requested
   if (show_time) {
     const double time_taken = ((double) (end_time - start_time)) / (double) CLOCKS_PER_SEC;
     if (fprintf(output, "Calculation Time: %lf seconds\n", time_taken) < 0) {
@@ -422,6 +492,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Step 13: Close output file if we opened one
   if (output != stdout) {
     if (verbose) {
       fprintf(stderr, "Closing output file\n");
@@ -433,7 +504,9 @@ int main(int argc, char *argv[]) {
       cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
-  } else {
+  }
+  // Flush stdout to ensure all output is written
+  else {
     if (fflush(stdout) == EOF) {
       mpz_clear(result);
       cleanup_resources(output_file, free_args, argc, argv);
@@ -445,6 +518,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Cleaning up memory\n");
   }
 
+  // Step 14: Clean up allocated memory and resources
   mpz_clear(result);
 
   cleanup_resources(output_file, free_args, argc, argv);
