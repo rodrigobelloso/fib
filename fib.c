@@ -2,6 +2,8 @@
 #error "C99 Minimum Required"
 #endif
 
+#define _POSIX_C_SOURCE 200809L
+
 #include "fib.h"
 #include <errno.h>
 #include <fcntl.h>
