@@ -43,15 +43,15 @@ int main(int argc, char *argv[]) {
       verbose = 1;
     } else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0) {
       if (i + 1 < argc) {
-        i++;
-        if (strcmp(argv[i], "dec") == 0) {
+        char const *format_arg = argv[++i];
+        if (strcmp(format_arg, "dec") == 0) {
           format = DECIMAL;
-        } else if (strcmp(argv[i], "hex") == 0) {
+        } else if (strcmp(format_arg, "hex") == 0) {
           format = HEXADECIMAL;
-        } else if (strcmp(argv[i], "bin") == 0) {
+        } else if (strcmp(format_arg, "bin") == 0) {
           format = BINARY;
         } else {
-          fprintf(stderr, "Error: Unknown format '%s'\n", argv[i]);
+          fprintf(stderr, "Error: Unknown format '%s'\n", format_arg);
           fprintf(stderr, "Valid options: dec, hex, bin\n");
           if (free_args)
             free_generated_args(argc, argv);
@@ -65,15 +65,15 @@ int main(int argc, char *argv[]) {
       }
     } else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--algorithm") == 0) {
       if (i + 1 < argc) {
-        i++;
-        if (strcmp(argv[i], "iter") == 0) {
+        char const *algo_arg = argv[++i];
+        if (strcmp(algo_arg, "iter") == 0) {
           algo = ITERATIVE;
-        } else if (strcmp(argv[i], "recur") == 0) {
+        } else if (strcmp(algo_arg, "recur") == 0) {
           algo = RECURSIVE;
-        } else if (strcmp(argv[i], "matrix") == 0) {
+        } else if (strcmp(algo_arg, "matrix") == 0) {
           algo = MATRIX;
         } else {
-          fprintf(stderr, "Error: Unknown algorithm '%s'\n", argv[i]);
+          fprintf(stderr, "Error: Unknown algorithm '%s'\n", algo_arg);
           fprintf(stderr, "Valid options: iter, recur, matrix\n");
           if (free_args)
             free_generated_args(argc, argv);
