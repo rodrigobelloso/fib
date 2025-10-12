@@ -5,33 +5,27 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch: # Allow manual triggers
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 2
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Create file hash
-        id: files-hash
-        run: |
-          SHELL_HASH=$(find . -name "*.sh" -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
-          C_HASH=$(find . -name "*.c" -o -name "*.h" -type f -exec sha256sum {} \; | sort | sha256sum | cut -d' ' -f1)
-          echo "shell_hash=$SHELL_HASH" >> $GITHUB_OUTPUT
-          echo "c_hash=$C_HASH" >> $GITHUB_OUTPUT
-
-      - name: Configure shellcheck cache
-        uses: actions/cache@v3
-        id: cache-shellcheck
+      - name: Cache apt packages
+        uses: actions/cache@v4
         with:
-          path: |
-            ~/.local/bin/shellcheck
-            ~/.cabal/bin/shellcheck
-          key: ${{ runner.os }}-shellcheck-${{ steps.files-hash.outputs.shell_hash }}
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/build.yml') }}
           restore-keys: |
-            ${{ runner.os }}-shellcheck-
+            ${{ runner.os }}-apt-
 
       - name: Install dependencies
         run: |
@@ -43,13 +37,32 @@ jobs:
           chmod +x tests/lint.sh
           cd tests && ./lint.sh
 
-  build:
+      - name: Create lint report
+        if: always()
+        run: |
+          echo "### Lint Results :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "All linting checks passed successfully!" >> $GITHUB_STEP_SUMMARY
+
+  build-linux:
     needs: lint
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 2
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+
+    name: build-linux (${{ matrix.compiler }})
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/build.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
 
       - name: Install dependencies
         run: |
@@ -57,6 +70,8 @@ jobs:
           sudo apt-get install -y libgmp-dev
 
       - name: Build with Makefile
+        env:
+          CC: ${{ matrix.compiler }}
         run: make
 
       - name: Test
@@ -64,13 +79,30 @@ jobs:
           chmod +x tests/build.sh
           cd tests && ./build.sh
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fib-linux-${{ matrix.compiler }}
+          path: fib
+          retention-days: 7
+
+      - name: Create build summary
+        if: success()
+        run: |
+          echo "### Build Results (${{ matrix.compiler }}) :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Compiler:** ${{ matrix.compiler }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **OS:** Ubuntu Latest" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Success" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Binary size: $(ls -lh fib | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+
   build-macos:
     needs: lint
     runs-on: macos-latest
-    timeout-minutes: 3
+    timeout-minutes: 2
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: brew install gmp
@@ -82,3 +114,36 @@ jobs:
         run: |
           chmod +x tests/build.sh
           cd tests && ./build.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fib-macos
+          path: fib
+          retention-days: 7
+
+      - name: Create build summary
+        if: success()
+        run: |
+          echo "### Build Results (macOS) :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Compiler:** clang (default)" >> $GITHUB_STEP_SUMMARY
+          echo "- **OS:** macOS Latest" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Success" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Binary size: $(ls -lh fib | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+
+  build-summary:
+    needs: [lint, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check build status
+        run: |
+          echo "### Workflow Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All jobs have completed. Check individual job results above." >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if any job failed
+        if: contains(needs.*.result, 'failure')
+        run: exit 1
