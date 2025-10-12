@@ -4,10 +4,13 @@
 
 #include "fib.h"
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
+#include <unistd.h>
 
 int main(int argc, char *argv[]) {
   int free_args = 0;
@@ -240,9 +243,17 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Opening output file: %s\n", output_file);
     }
 
-    output = fopen(output_file, "w");
-    if (output == NULL) {
+    int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd == -1) {
       perror("Error opening output file");
+      mpz_clear(result);
+      return EXIT_FAILURE;
+    }
+
+    output = fdopen(fd, "w");
+    if (output == NULL) {
+      perror("Error creating file stream");
+      close(fd);
       mpz_clear(result);
       return EXIT_FAILURE;
     }
