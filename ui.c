@@ -237,6 +237,8 @@ void run_user_interface(int *argc, char ***argv) {
 
   // Step 6: Configure optional output file
   // If specified, results will be written to a file instead of stdout
+  // Note: The path will be validated by validate_output_path() in main()
+  // to prevent tainted path vulnerabilities (CWE-73)
   char *output_file = get_filename("Enter the output file name", 1);
 
   // Step 7: Calculate the number of arguments needed
@@ -300,6 +302,9 @@ void run_user_interface(int *argc, char ***argv) {
     new_argv[arg_index++] = my_strdup("-v");
 
   // Add output file option if specified
+  // Note: User input from get_filename() will be validated by
+  // validate_output_path() when processed by main() to prevent
+  // tainted path vulnerabilities (CWE-73)
   if (output_file) {
     new_argv[arg_index++] = my_strdup("-o");
     new_argv[arg_index++] = my_strdup(output_file);
