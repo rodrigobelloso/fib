@@ -7,12 +7,88 @@
 #include "fib.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+
+static char *validate_output_path(const char *path) {
+  if (path == NULL || path[0] == '\0') {
+    fprintf(stderr, "Error: Empty file path\n");
+    return NULL;
+  }
+
+  if (strstr(path, "..") != NULL) {
+    fprintf(stderr, "Error: Path traversal detected in '%s'\n", path);
+    return NULL;
+  }
+
+  if (strlen(path) != strcspn(path, "\0")) {
+    fprintf(stderr, "Error: Null byte in path\n");
+    return NULL;
+  }
+
+  char *resolved_path = realpath(path, NULL);
+
+  if (resolved_path == NULL) {
+    char *path_copy = strdup(path);
+    if (path_copy == NULL) {
+      perror("Error allocating memory");
+      return NULL;
+    }
+
+    char *last_slash = strrchr(path_copy, '/');
+    if (last_slash != NULL) {
+      *last_slash = '\0';
+      char *dir_path = realpath(path_copy, NULL);
+      if (dir_path != NULL) {
+        // Reconstruct the full path
+        size_t len = strlen(dir_path) + strlen(last_slash + 1) + 2;
+        resolved_path = malloc(len);
+        if (resolved_path != NULL) {
+          snprintf(resolved_path, len, "%s/%s", dir_path, last_slash + 1);
+        }
+        free(dir_path);
+      }
+    } else {
+      char cwd[PATH_MAX];
+      if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        size_t len = strlen(cwd) + strlen(path_copy) + 2;
+        resolved_path = malloc(len);
+        if (resolved_path != NULL) {
+          snprintf(resolved_path, len, "%s/%s", cwd, path_copy);
+        }
+      }
+    }
+    free(path_copy);
+  }
+
+  if (resolved_path == NULL) {
+    perror("Error resolving file path");
+    return NULL;
+  }
+
+  if (strncmp(resolved_path, "/etc/", 5) == 0 || strncmp(resolved_path, "/sys/", 5) == 0 ||
+      strncmp(resolved_path, "/proc/", 6) == 0 || strncmp(resolved_path, "/dev/", 5) == 0) {
+    fprintf(stderr, "Error: Cannot write to system directory '%s'\n", resolved_path);
+    free(resolved_path);
+    return NULL;
+  }
+
+  return resolved_path;
+}
+
+static void cleanup_resources(char *output_file, int free_args, int argc, char **argv) {
+  if (output_file != NULL) {
+    free(output_file);
+  }
+  if (free_args) {
+    free_generated_args(argc, argv);
+  }
+}
 
 int main(int argc, char *argv[]) {
   int free_args = 0;
@@ -27,15 +103,14 @@ int main(int argc, char *argv[]) {
   int raw_output = 0;
   int verbose = 0;
   long limit = -1;
-  char const *output_file = NULL;
+  char *output_file = NULL;
   Algorithm algo = ITERATIVE;
   OutputFormat format = DECIMAL;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       display_help(argv[0]);
-      if (free_args)
-        free_generated_args(argc, argv);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_SUCCESS;
     } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
       show_time = 1;
@@ -58,14 +133,12 @@ int main(int argc, char *argv[]) {
         } else {
           fprintf(stderr, "Error: Unknown format '%s'\n", format_arg);
           fprintf(stderr, "Valid options: dec, hex, bin\n");
-          if (free_args)
-            free_generated_args(argc, argv);
+          cleanup_resources(output_file, free_args, argc, argv);
           return EXIT_FAILURE;
         }
       } else {
         fprintf(stderr, "Error: Missing format for -f/--format option\n");
-        if (free_args)
-          free_generated_args(argc, argv);
+        cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
     } else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--algorithm") == 0) {
@@ -80,31 +153,32 @@ int main(int argc, char *argv[]) {
         } else {
           fprintf(stderr, "Error: Unknown algorithm '%s'\n", algo_arg);
           fprintf(stderr, "Valid options: iter, recur, matrix\n");
-          if (free_args)
-            free_generated_args(argc, argv);
+          cleanup_resources(output_file, free_args, argc, argv);
           return EXIT_FAILURE;
         }
       } else {
         fprintf(stderr, "Error: Missing algorithm for -a/--algorithm option\n");
-        if (free_args)
-          free_generated_args(argc, argv);
+        cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
     } else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
       if (i + 1 < argc) {
-        output_file = argv[++i];
+        char *validated_path = validate_output_path(argv[++i]);
+        if (validated_path == NULL) {
+          cleanup_resources(output_file, free_args, argc, argv);
+          return EXIT_FAILURE;
+        }
+        output_file = validated_path;
       } else {
         fprintf(stderr, "Error: Missing filename for -o/--output option\n");
-        if (free_args)
-          free_generated_args(argc, argv);
+        cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
     } else if (limit == -1) {
       if (argv[i][0] == '-' && argv[i][1] != '\0') {
         fprintf(stderr, "Unknown option: %s\n", argv[i]);
         fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
-        if (free_args)
-          free_generated_args(argc, argv);
+        cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
 
@@ -113,13 +187,11 @@ int main(int argc, char *argv[]) {
       limit = strtol(argv[i], &end, 10);
       if ((argv[i] == end) || *end) {
         fprintf(stderr, "Error Parsing %s\n", argv[i]);
-        if (free_args)
-          free_generated_args(argc, argv);
+        cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       } else if (errno == ERANGE) {
         perror(argv[i]);
-        if (free_args)
-          free_generated_args(argc, argv);
+        cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
     } else {
@@ -127,8 +199,7 @@ int main(int argc, char *argv[]) {
               "Usage: %s <limit> [-h] [-t] [-T] [-r] [-v] [-f format] [-a algo] [-o filename]\n",
               argv[0]);
       fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
-      if (free_args)
-        free_generated_args(argc, argv);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
   }
@@ -136,8 +207,7 @@ int main(int argc, char *argv[]) {
   if (limit == -1) {
     fprintf(stderr, "Error: Missing limit value\n");
     fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
-    if (free_args)
-      free_generated_args(argc, argv);
+    cleanup_resources(output_file, free_args, argc, argv);
     return EXIT_FAILURE;
   }
 
@@ -183,6 +253,8 @@ int main(int argc, char *argv[]) {
     start_time = clock();
     if (start_time == (clock_t) -1) {
       fprintf(stderr, "Error start_time clock()\n");
+      mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
     if (verbose) {
@@ -232,6 +304,7 @@ int main(int argc, char *argv[]) {
     if (end_time == (clock_t) -1) {
       fprintf(stderr, "Error end_time clock()\n");
       mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
     if (verbose) {
@@ -249,6 +322,7 @@ int main(int argc, char *argv[]) {
     if (fd == -1) {
       perror("Error opening output file");
       mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
 
@@ -257,6 +331,7 @@ int main(int argc, char *argv[]) {
       perror("Error creating file stream");
       close(fd);
       mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
   }
@@ -288,6 +363,7 @@ int main(int argc, char *argv[]) {
           fclose(output);
         }
         mpz_clear(result);
+        cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
     } else if (format != DECIMAL) {
@@ -296,6 +372,7 @@ int main(int argc, char *argv[]) {
           fclose(output);
         }
         mpz_clear(result);
+        cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
     }
@@ -306,6 +383,7 @@ int main(int argc, char *argv[]) {
         fclose(output);
       }
       mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
 
@@ -321,6 +399,7 @@ int main(int argc, char *argv[]) {
         fclose(output);
       }
       mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
 
@@ -334,6 +413,7 @@ int main(int argc, char *argv[]) {
         fclose(output);
       }
       mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
 
@@ -350,11 +430,13 @@ int main(int argc, char *argv[]) {
     if (fclose(output) != 0) {
       perror("Error closing output file");
       mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
   } else {
     if (fflush(stdout) == EOF) {
       mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
   }
@@ -365,9 +447,7 @@ int main(int argc, char *argv[]) {
 
   mpz_clear(result);
 
-  if (free_args) {
-    free_generated_args(argc, argv);
-  }
+  cleanup_resources(output_file, free_args, argc, argv);
 
   if (verbose) {
     fprintf(stderr, "Program completed successfully\n");
