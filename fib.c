@@ -419,6 +419,15 @@ int main(int argc, char *argv[]) {
     // - Blocks writes to system directories (/etc, /sys, /proc, /dev)
     // This sanitization mitigates tainted path vulnerabilities (CWE-73)
 
+    // Additional defensive check: ensure path doesn't contain path traversal
+    // This helps CodeQL taint analysis recognize the sanitization
+    if (strstr(output_file, "..") != NULL) {
+      fprintf(stderr, "Error: Invalid output path\n");
+      mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
+      return EXIT_FAILURE;
+    }
+
     // Use open() with O_CREAT | O_NOFOLLOW to safely create the file
     // O_NOFOLLOW prevents following symlinks, mitigating TOCTOU attacks
     int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
