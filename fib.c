@@ -18,6 +18,7 @@ int main(int argc, char *argv[]) {
   }
 
   int show_time = 0;
+  int time_only = 0;
   int raw_output = 0;
   int verbose = 0;
   long limit = -1;
@@ -32,6 +33,9 @@ int main(int argc, char *argv[]) {
         free_generated_args(argc, argv);
       return EXIT_SUCCESS;
     } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
+      show_time = 1;
+    } else if (strcmp(argv[i], "-T") == 0 || strcmp(argv[i], "--time-only") == 0) {
+      time_only = 1;
       show_time = 1;
     } else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--raw") == 0) {
       raw_output = 1;
@@ -114,7 +118,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
       }
     } else {
-      fprintf(stderr, "Usage: %s <limit> [-h] [-t] [-r] [-v] [-f format] [-a algo] [-o filename]\n",
+      fprintf(stderr,
+              "Usage: %s <limit> [-h] [-t] [-T] [-r] [-v] [-f format] [-a algo] [-o filename]\n",
               argv[0]);
       fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
       if (free_args)
@@ -247,65 +252,67 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Preparing to write result\n");
   }
 
-  if (!raw_output) {
-    const char *format_name;
-    switch (format) {
-      case DECIMAL:
-        format_name = "decimal";
-        break;
-      case HEXADECIMAL:
-        format_name = "hexadecimal";
-        break;
-      case BINARY:
-        format_name = "binary";
-        break;
-      default:
-        format_name = "decimal";
+  if (!time_only) {
+    if (!raw_output) {
+      const char *format_name;
+      switch (format) {
+        case DECIMAL:
+          format_name = "decimal";
+          break;
+        case HEXADECIMAL:
+          format_name = "hexadecimal";
+          break;
+        case BINARY:
+          format_name = "binary";
+          break;
+        default:
+          format_name = "decimal";
+      }
+
+      if (fprintf(output, "Fibonacci Number %ld (%s): %s", limit, format_name,
+                  format != DECIMAL ? get_format_prefix(format) : "") < 0) {
+        if (output != stdout) {
+          fclose(output);
+        }
+        mpz_clear(result);
+        return EXIT_FAILURE;
+      }
+    } else if (format != DECIMAL) {
+      if (fprintf(output, "%s", get_format_prefix(format)) < 0) {
+        if (output != stdout) {
+          fclose(output);
+        }
+        mpz_clear(result);
+        return EXIT_FAILURE;
+      }
     }
 
-    if (fprintf(output, "Fibonacci Number %ld (%s): %s", limit, format_name,
-                format != DECIMAL ? get_format_prefix(format) : "") < 0) {
+    char *result_str = get_formatted_result(result, format, verbose);
+    if (result_str == NULL) {
       if (output != stdout) {
         fclose(output);
       }
       mpz_clear(result);
       return EXIT_FAILURE;
     }
-  } else if (format != DECIMAL) {
-    if (fprintf(output, "%s", get_format_prefix(format)) < 0) {
+
+    if (verbose) {
+      size_t result_len = strlen(result_str);
+      fprintf(stderr, "Result has %zu digits in %s format\n", result_len,
+              format == DECIMAL ? "decimal" : (format == HEXADECIMAL ? "hexadecimal" : "binary"));
+    }
+
+    if (fprintf(output, "%s\n", result_str) < 0) {
+      free(result_str);
       if (output != stdout) {
         fclose(output);
       }
       mpz_clear(result);
       return EXIT_FAILURE;
     }
-  }
 
-  char *result_str = get_formatted_result(result, format, verbose);
-  if (result_str == NULL) {
-    if (output != stdout) {
-      fclose(output);
-    }
-    mpz_clear(result);
-    return EXIT_FAILURE;
-  }
-
-  if (verbose) {
-    size_t result_len = strlen(result_str);
-    fprintf(stderr, "Result has %zu digits in %s format\n", result_len,
-            format == DECIMAL ? "decimal" : (format == HEXADECIMAL ? "hexadecimal" : "binary"));
-  }
-
-  if (fprintf(output, "%s\n", result_str) < 0) {
     free(result_str);
-    if (output != stdout) {
-      fclose(output);
-    }
-    mpz_clear(result);
-    return EXIT_FAILURE;
   }
-
-  free(result_str);
 
   if (show_time) {
     const double time_taken = ((double) (end_time - start_time)) / (double) CLOCKS_PER_SEC;

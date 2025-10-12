@@ -11,6 +11,9 @@ void display_help(const char *program_name) {
   printf("Options:\n");
   printf("  -h, --help    Display this help message and exit.\n");
   printf("  -t, --time    Show calculation time.\n");
+  printf("  -T, --time-only\n");
+  printf("                Show only calculation time (no result output).\n");
+  printf("                Useful for stress testing and benchmarking.\n");
   printf("  -r, --raw     Output only the number without prefix.\n");
   printf("  -v, --verbose Show detailed information during calculation.\n");
   printf("  -o, --output  Save the result to the specified file.\n");
@@ -31,6 +34,7 @@ void display_help(const char *program_name) {
   printf("  %s 30 -f hex           Display result in hexadecimal\n", program_name);
   printf("  %s 20 -f bin -r        Display raw binary result\n", program_name);
   printf("  %s 30 -a recur -t      Calculate recursively and show time\n", program_name);
+  printf("  %s 1000000 -T          Stress test - show only time\n", program_name);
   printf("\n");
 }
 

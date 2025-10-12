@@ -106,6 +106,12 @@ gcc fib.c algorithms.c matrix.c utils.c -o fib -I/opt/homebrew/include -L/opt/ho
 # or
 ./fib <number> --time
 
+# Show ONLY the calculation time without displaying the result
+# Useful for stress testing and benchmarking
+./fib <number> -T
+# or
+./fib <number> --time-only
+
 # Calculate Fibonacci number without the "Fibonacci Number X:" prefix
 ./fib <number> -r
 # or
@@ -139,6 +145,13 @@ Calculate using matrix exponentiation and show time taken:
 ./fib 100 -a matrix -t
 ```
 
+Stress test: Calculate large Fibonacci numbers showing only execution time:
+
+```sh
+./fib 1000000 -T
+./fib 500000 -T -a matrix
+```
+
 Display result in hexadecimal format:
 
 ```sh
@@ -157,6 +170,14 @@ Compare performance between algorithms:
 ./fib 30 -a iter -t
 ./fib 30 -a recur -t
 ./fib 30 -a matrix -t
+```
+
+Benchmark different algorithms with time-only mode:
+
+```sh
+echo "=== Performance Comparison ==="
+echo -n "Iterative: " && ./fib 100000 -T -a iter
+echo -n "Matrix:    " && ./fib 100000 -T -a matrix
 ```
 
 Generate raw output and save to file:

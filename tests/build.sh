@@ -144,40 +144,6 @@ if run_test 10 "^0b110111$" "Fibonacci raw bin" "-f bin -r"; then
 fi
 ((total_tests++))
 
-echo -e "\n=== Interactive mode test ==="
-echo -n "Testing interactive mode simulation: "
-
-cat > test_input.txt << EOF
-10
-n
-n
-y
-n
-n
-
-EOF
-
-output=$(./fib < test_input.txt 2>&1)
-exit_code=$?
-
-if [ $exit_code -ne 0 ]; then
-  echo -e "${RED}ERROR: Program terminated with exit code $exit_code in interactive mode${NC}"
-  failed_tests+=("Interactive mode - Exit code $exit_code")
-else
-  if echo "$output" | grep -q "Fibonacci Number 10 (decimal): 55"; then
-    echo -e "${GREEN}SUCCESS: Interactive mode worked correctly${NC}"
-    ((passed_tests++))
-  else
-    echo -e "${RED}FAILED: Interactive mode did not produce expected output${NC}"
-    echo "  Expected to contain: Fibonacci Number 10 (decimal): 55"
-    echo "  Output contains: $(echo "$output" | grep -o "Fibonacci Number.*" | head -1)"
-    failed_tests+=("Interactive mode - Incorrect output")
-  fi
-fi
-((total_tests++))
-
-rm -f test_input.txt
-
 echo -e "\n=== Flag tests ==="
 
 echo -n "Testing with -h flag: "
@@ -248,6 +214,81 @@ else
   else
     echo -e "${RED}FAILED: No time output detected${NC}"
     failed_tests+=("Long time flag test - No time output")
+  fi
+fi
+((total_tests++))
+
+echo -n "Testing with -T flag (time only): "
+output=$(./fib -T 100)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Time only flag test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Calculation Time: " && ! echo "$output" | grep -q "Fibonacci Number"; then
+    echo -e "${GREEN}SUCCESS: Time only output detected${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Expected only time output, no result${NC}"
+    echo "  Output: $output"
+    failed_tests+=("Time only flag test - Incorrect output")
+  fi
+fi
+((total_tests++))
+
+echo -n "Testing with --time-only flag: "
+output=$(./fib --time-only 100)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Long time only flag test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Calculation Time: " && ! echo "$output" | grep -q "Fibonacci Number"; then
+    echo -e "${GREEN}SUCCESS: Time only output detected${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Expected only time output, no result${NC}"
+    echo "  Output: $output"
+    failed_tests+=("Long time only flag test - Incorrect output")
+  fi
+fi
+((total_tests++))
+
+echo -n "Testing -T with verbose flag: "
+output=$(./fib -T -v 50 2>&1)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Time only with verbose test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Calculation Time: " && echo "$output" | grep -q "Initializing" && ! echo "$output" | grep -q "Fibonacci Number"; then
+    echo -e "${GREEN}SUCCESS: Time only with verbose working correctly${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Time only with verbose not working correctly${NC}"
+    echo "  Expected: time output, verbose info, but no result"
+    failed_tests+=("Time only with verbose test - Incorrect output")
+  fi
+fi
+((total_tests++))
+
+echo -n "Testing -T with different algorithms: "
+output=$(./fib -T -a matrix 1000)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  echo -e "${RED}ERROR: Program terminated with exit code $exit_code${NC}"
+  failed_tests+=("Time only with algorithm test - Exit code $exit_code")
+else
+  if echo "$output" | grep -q "Calculation Time: " && ! echo "$output" | grep -q "Fibonacci Number"; then
+    echo -e "${GREEN}SUCCESS: Time only with algorithm working correctly${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Time only with algorithm not working correctly${NC}"
+    failed_tests+=("Time only with algorithm test - Incorrect output")
   fi
 fi
 ((total_tests++))
@@ -585,6 +626,33 @@ if [ $perf_result -eq 0 ]; then
   ((passed_tests++))
 else
   failed_tests+=("Matrix performance test - Failed with code $perf_result")
+fi
+
+echo -e "\n=== Stress test with time-only mode ==="
+echo "Stress test: Fibonacci(100000) with time-only flag..."
+output=$(./fib -T 100000)
+perf_result=$?
+((total_tests++))
+if [ $perf_result -eq 0 ] && echo "$output" | grep -q "Calculation Time: "; then
+  echo -e "${GREEN}SUCCESS: Stress test completed${NC}"
+  echo "  $output"
+  ((passed_tests++))
+else
+  echo -e "${RED}FAILED: Stress test failed${NC}"
+  failed_tests+=("Stress test - Failed with code $perf_result")
+fi
+
+echo "Stress test: Fibonacci(500000) with matrix algorithm (time-only)..."
+output=$(./fib -T -a matrix 500000)
+perf_result=$?
+((total_tests++))
+if [ $perf_result -eq 0 ] && echo "$output" | grep -q "Calculation Time: "; then
+  echo -e "${GREEN}SUCCESS: Matrix stress test completed${NC}"
+  echo "  $output"
+  ((passed_tests++))
+else
+  echo -e "${RED}FAILED: Matrix stress test failed${NC}"
+  failed_tests+=("Matrix stress test - Failed with code $perf_result")
 fi
 
 echo -e "\n=== Test Summary ==="

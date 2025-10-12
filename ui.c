@@ -197,6 +197,11 @@ void run_user_interface(int *argc, char ***argv) {
 
   int show_time = get_yes_no("Do you want to show calculation time?", 0);
 
+  int time_only = 0;
+  if (show_time) {
+    time_only = get_yes_no("Do you want to show ONLY the time (skip result output)?", 0);
+  }
+
   int raw_output = get_yes_no("Do you want to show only the raw number?", 0);
 
   int verbose = get_yes_no("Do you want to show detailed calculation information?", 0);
@@ -209,6 +214,8 @@ void run_user_interface(int *argc, char ***argv) {
   if (strcmp(format, "dec") != 0)
     new_argc += 2;
   if (show_time)
+    new_argc += 1;
+  if (time_only)
     new_argc += 1;
   if (raw_output)
     new_argc += 1;
@@ -243,6 +250,8 @@ void run_user_interface(int *argc, char ***argv) {
 
   if (show_time)
     new_argv[arg_index++] = my_strdup("-t");
+  if (time_only)
+    new_argv[arg_index++] = my_strdup("-T");
   if (raw_output)
     new_argv[arg_index++] = my_strdup("-r");
   if (verbose)
@@ -259,6 +268,7 @@ void run_user_interface(int *argc, char ***argv) {
   printf("Algorithm: %s\n", algorithm);
   printf("Format: %s\n", format);
   printf("Show time: %s\n", show_time ? "Yes" : "No");
+  printf("Time only (no result): %s\n", time_only ? "Yes" : "No");
   printf("Raw output: %s\n", raw_output ? "Yes" : "No");
   printf("Detailed information: %s\n", verbose ? "Yes" : "No");
   printf("Output file: %s\n", output_file ? output_file : "No (standard output)");
