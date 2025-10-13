@@ -190,7 +190,8 @@ int main(int argc, char *argv[]) {
     // Handle output format option
     else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0) {
       if (i + 1 < argc) {
-        char const *format_arg = argv[++i];
+        i++;
+        char const *format_arg = argv[i];
         if (strcmp(format_arg, "dec") == 0) {
           format = DECIMAL;
         } else if (strcmp(format_arg, "hex") == 0) {
@@ -212,7 +213,8 @@ int main(int argc, char *argv[]) {
     // Handle algorithm selection option
     else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--algorithm") == 0) {
       if (i + 1 < argc) {
-        char const *algo_arg = argv[++i];
+        i++;
+        char const *algo_arg = argv[i];
         if (strcmp(algo_arg, "iter") == 0) {
           algo = ITERATIVE;
         } else if (strcmp(algo_arg, "recur") == 0) {
@@ -234,7 +236,8 @@ int main(int argc, char *argv[]) {
     // Handle output file option
     else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
       if (i + 1 < argc) {
-        char *validated_path = validate_output_path(argv[++i]);
+        i++;
+        char *validated_path = validate_output_path(argv[i]);
         if (validated_path == NULL) {
           cleanup_resources(output_file, free_args, argc, argv);
           return EXIT_FAILURE;
