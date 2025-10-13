@@ -113,9 +113,7 @@ static char *validate_output_path(const char *path) {
 }
 
 static void cleanup_resources(char *output_file, int free_args, int argc, char **argv) {
-  if (output_file != NULL) {
-    free(output_file);
-  }
+  free(output_file);
   if (free_args) {
     free_generated_args(argc, argv);
   }
