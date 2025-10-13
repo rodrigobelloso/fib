@@ -445,9 +445,8 @@ int main(int argc, char *argv[]) {
     // Use open() with O_CREAT | O_NOFOLLOW to safely create the file
     // O_NOFOLLOW prevents following symlinks, mitigating TOCTOU attacks
     // The path in sanitized_path has been validated and is safe to use
-    // lgtm[cpp/path-injection]
-    // codeql[cpp/path-injection]
-    int fd = open(sanitized_path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
+    int fd = open(sanitized_path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW,
+                  0644);  // lgtm[cpp/path-injection] codeql[cpp/path-injection]
     if (fd == -1) {
       perror("Error opening output file");
       mpz_clear(result);
