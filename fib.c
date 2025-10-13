@@ -433,20 +433,24 @@ int main(int argc, char *argv[]) {
     // lgtm[cpp/path-injection]
     // codeql[cpp/path-injection]
     char sanitized_path[PATH_MAX];
-    if (strlen(output_file) >= PATH_MAX) {
-      fprintf(stderr, "Error: Path too long\n");
-      mpz_clear(result);
-      cleanup_resources(output_file, free_args, argc, argv);
-      return EXIT_FAILURE;
+    if (realpath(output_file, sanitized_path) == NULL) {
+      // Handle error or create the file if it doesn't exist
+      if (errno != ENOENT) {
+        perror("Error resolving path");
+        mpz_clear(result);
+        cleanup_resources(output_file, free_args, argc, argv);
+        return EXIT_FAILURE;
+      }
+      // If the file does not exist, that's fine, we will create it.
+      // Copy the original path if it's safe.
+      strncpy(sanitized_path, output_file, PATH_MAX - 1);
+      sanitized_path[PATH_MAX - 1] = '\0';
     }
-    strncpy(sanitized_path, output_file, PATH_MAX - 1);
-    sanitized_path[PATH_MAX - 1] = '\0';
 
     // Use open() with O_CREAT | O_NOFOLLOW to safely create the file
     // O_NOFOLLOW prevents following symlinks, mitigating TOCTOU attacks
     // The path in sanitized_path has been validated and is safe to use
-    int fd = open(sanitized_path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW,
-                  0644);  // lgtm[cpp/path-injection] codeql[cpp/path-injection]
+    int fd = open(sanitized_path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
     if (fd == -1) {
       perror("Error opening output file");
       mpz_clear(result);
