@@ -1,4 +1,4 @@
-[![GitHub Actions tests](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml) [![GitHub License](https://img.shields.io/badge/License-GPL_3.0-yellow.svg)](./LICENSE)
+[![GitHub Actions build and test](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml) [![GitHub Actions CodeQL](https://github.com/rodrigobelloso/fib/actions/workflows/codeql.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/codeql.yml)[![GitHub License](https://img.shields.io/badge/License-GPL_3.0-yellow.svg)](./LICENSE)
 
 # fib
 
@@ -40,29 +40,149 @@ brew install gmp
 
 ### Automatically:
 
-fib uses a `makefile` for easier compilation:
+fib uses a comprehensive `Makefile` for building and managing the project. The Makefile automatically detects your platform (macOS/Linux) and adjusts paths for GMP accordingly.
+
+#### Basic Build Commands:
 
 ```sh
-# Build the project
+# Build the project (default target)
 make
+# or
+make all
 
-# Clean object files and executables
-make clean
+# Get help about all available commands
+make help
 
-# Clean only object files
-make cleanobj
-
-# Build with debug information
-make debug
+# Display project information and configuration
+make info
 
 # Rebuild the project (clean and then build)
 make rebuild
-
-# Run basic tests
-make test
 ```
 
-_The `makefile` will automatically detect your platform and will adjust the path for GMP accordingly._
+#### Build Variants:
+
+The Makefile supports multiple build configurations:
+
+```sh
+# Build with debug symbols and no optimization
+make debug
+
+# Build optimized release version (-O3, strip symbols)
+make release
+
+# Build with profiling support (for gprof)
+make profile
+
+# Build with AddressSanitizer (detect memory errors)
+make asan
+
+# Build with UndefinedBehaviorSanitizer
+make ubsan
+
+# Build with MemorySanitizer
+make msan
+
+# Build with ThreadSanitizer
+make tsan
+
+# Build with coverage instrumentation
+make coverage
+```
+
+#### Testing:
+
+```sh
+# Run basic tests
+make test
+
+# Run comprehensive test suite
+make test-full
+
+# Run tests with Valgrind (memory leak detection)
+make test-valgrind
+
+# Run tests with all sanitizers
+make test-sanitizers
+```
+
+#### Code Quality:
+
+```sh
+# Run all linters (C code + shell scripts)
+make lint
+
+# Run C code linter (clang-tidy)
+make lint-c
+
+# Run shell script linter
+make lint-shell
+
+# Format source code with clang-format
+make format
+
+# Check if code is properly formatted
+make check-format
+
+# Run static analysis with clang
+make analyze
+
+# Run cppcheck static analyzer
+make cppcheck
+```
+
+#### Dependency Management:
+
+```sh
+# Check if dependencies are installed
+make check-deps
+
+# Install system dependencies (works on macOS/Linux)
+make install-deps
+```
+
+#### Installation:
+
+```sh
+# Install binary to /usr/local/bin (default)
+make install
+
+# Install to a custom prefix
+make PREFIX=/opt install
+
+# Uninstall the binary
+make uninstall
+```
+
+#### Cleanup:
+
+```sh
+# Remove build artifacts (objects, executables, coverage files)
+make clean
+
+# Remove only object files
+make cleanobj
+
+# Deep clean (remove all generated files)
+make distclean
+```
+
+#### Advanced Usage:
+
+You can customize the build by setting variables:
+
+```sh
+# Build with custom optimization level
+make OPT_LEVEL=-O3
+
+# Build with custom compiler
+make CC=clang
+
+# Build with custom prefix
+make PREFIX=/opt
+```
+
+_The Makefile automatically detects your platform and adjusts compilation flags accordingly. On macOS, it uses Homebrew paths for GMP; on Linux, it uses system paths._
 
 ### Manually:
 
