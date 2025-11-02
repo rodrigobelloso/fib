@@ -1,4 +1,4 @@
-[![GitHub Actions build and test](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml) [![GitHub Actions CodeQL](https://github.com/rodrigobelloso/fib/actions/workflows/codeql.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/codeql.yml)[![GitHub License](https://img.shields.io/badge/License-GPL_3.0-yellow.svg)](./LICENSE)
+[![GitHub Actions build and test](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml) [![GitHub Actions CodeQL](https://github.com/rodrigobelloso/fib/actions/workflows/codeql.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/codeql.yml) [![GitHub License](https://img.shields.io/badge/License-GPL_3.0-yellow.svg)](./LICENSE)
 
 # fib
 
