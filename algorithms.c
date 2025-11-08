@@ -36,37 +36,32 @@ void calculate_fibonacci_iterative(mpz_t result, long n, int verbose) {
 }
 
 void calculate_fibonacci_recursive(mpz_t result, long n, mpz_t *memo, int verbose) {
-  if (mpz_sgn(memo[n]) != 0) {
-    mpz_set(result, memo[n]);
-    return;
-  }
-
+  // Base cases
   if (n == 0) {
     mpz_set_ui(result, 0);
-    mpz_set_ui(memo[0], 0);
     return;
   } else if (n == 1) {
     mpz_set_ui(result, 1);
-    mpz_set_ui(memo[1], 1);
     return;
   }
 
-  if (verbose && (n % 100 == 0 || n <= 10)) {
-    fprintf(stderr, "Computing F(%ld) recursively...\n", n);
+  // Initialize base cases in memo
+  mpz_set_ui(memo[0], 0);
+  mpz_set_ui(memo[1], 1);
+
+  // Build up the solution iteratively to avoid stack overflow
+  // This uses memoization in a bottom-up approach instead of top-down recursion
+  for (long i = 2; i <= n; i++) {
+    if (verbose && (i % 100 == 0 || i <= 10)) {
+      fprintf(stderr, "Computing F(%ld) with memoization...\n", i);
+    }
+
+    // F(i) = F(i-1) + F(i-2)
+    mpz_add(memo[i], memo[i - 1], memo[i - 2]);
   }
 
-  mpz_t temp1, temp2;
-  mpz_init(temp1);
-  mpz_init(temp2);
-
-  calculate_fibonacci_recursive(temp1, n - 1, memo, verbose);
-  calculate_fibonacci_recursive(temp2, n - 2, memo, verbose);
-
-  mpz_add(result, temp1, temp2);
-  mpz_set(memo[n], result);
-
-  mpz_clear(temp1);
-  mpz_clear(temp2);
+  // Set the result
+  mpz_set(result, memo[n]);
 }
 
 void calculate_fibonacci_matrix(mpz_t result, long n, int verbose) {
