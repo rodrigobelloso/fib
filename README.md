@@ -18,11 +18,21 @@ fib calculates Fibonacci numbers up to a specified limit using arbitrary-precisi
 
 ### Automatically:
 
-fib includes a make file to install required dependencies:
+fib includes a Makefile to install required dependencies:
 
 ```sh
+# Install only build dependencies (GMP library, compiler tools)
 make install-deps
+
+# Install all dependencies including development tools
+# (clang-format, cppcheck, valgrind, shellcheck)
+make install-debug-deps
+
+# Check which dependencies are installed
+make check-deps
 ```
+
+**Note:** The Makefile automatically detects your package manager (Homebrew, apt-get, dnf, or pacman) and installs the appropriate packages.
 
 ### Manually:
 
@@ -100,11 +110,18 @@ make test
 make test-full
 
 # Run tests with Valgrind (memory leak detection)
+# Note: Requires valgrind to be installed
 make test-valgrind
 
 # Run tests with all sanitizers
 make test-sanitizers
 ```
+
+**Test Dependencies:**
+
+- `test` and `test-full` require the `fib` executable to be built
+- `test-valgrind` requires valgrind to be installed
+- Test scripts automatically check for required dependencies and provide clear error messages if missing
 
 #### Code Quality:
 
@@ -112,24 +129,36 @@ make test-sanitizers
 # Run all linters (C code + shell scripts)
 make lint
 
-# Run C code linter (clang-tidy)
+# Run C code linter (clang-format check)
+# Note: Skips gracefully if clang-format is not installed
 make lint-c
 
 # Run shell script linter
+# Note: Requires shellcheck and clang-format
 make lint-shell
 
 # Format source code with clang-format
+# Note: Requires clang-format to be installed
 make format
 
 # Check if code is properly formatted
+# Note: Requires clang-format to be installed
 make check-format
 
 # Run static analysis with clang
 make analyze
 
 # Run cppcheck static analyzer
+# Note: Requires cppcheck to be installed
 make cppcheck
 ```
+
+**Code Quality Dependencies:**
+
+- All code quality targets check for required tools before running
+- Missing tools result in clear error messages with guidance
+- `lint-c` will skip checks gracefully if clang-format is missing
+- Other targets will exit with an error if their required tool is missing
 
 #### Dependency Management:
 
@@ -137,9 +166,25 @@ make cppcheck
 # Check if dependencies are installed
 make check-deps
 
-# Install system dependencies (works on macOS/Linux)
+# Install only build dependencies (GMP library, compiler tools)
 make install-deps
+
+# Install all dependencies including development tools
+# (clang-format, cppcheck, valgrind, shellcheck)
+make install-debug-deps
 ```
+
+**Dependency Checking:**
+
+- All Makefile targets that require specific tools now check for their availability
+- If a required tool is missing, a clear error message is displayed
+- Test scripts (`tests/build.sh` and `tests/lint.sh`) validate dependencies before running
+- No more confusing "command not found" errors
+
+**What gets installed:**
+
+- `install-deps`: GMP library, build-essential/base-devel
+- `install-debug-deps`: All of the above plus clang-format, cppcheck, valgrind, shellcheck
 
 #### Installation:
 
