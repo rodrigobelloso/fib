@@ -222,7 +222,16 @@ test-full: all
 
 test-valgrind: all
 	@echo "Running tests with Valgrind..."
-	@which valgrind > /dev/null || { echo "Error: valgrind not installed"; exit 1; }
+	@if ! command -v valgrind >/dev/null 2>&1; then \
+		echo ""; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo "  ERROR: valgrind is not installed"; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo ""; \
+		echo "Please install valgrind to run memory leak tests."; \
+		echo ""; \
+		exit 1; \
+	fi
 	@valgrind --leak-check=full --show-leak-kinds=all \
 		--track-origins=yes --verbose \
 		./$(TARGET) 100
@@ -250,7 +259,17 @@ lint: lint-c lint-shell
 
 lint-c:
 	@echo "Checking C code formatting..."
-	@which clang-format > /dev/null || { echo "Warning: clang-format not installed, skipping..."; exit 0; }
+	@if ! command -v clang-format >/dev/null 2>&1; then \
+		echo ""; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo "  WARNING: clang-format is not installed"; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo ""; \
+		echo "Skipping C code formatting checks."; \
+		echo "Install clang-format to enable this check."; \
+		echo ""; \
+		exit 0; \
+	fi
 	@clang-format --dry-run --Werror $(SRC) fib.h || true
 
 lint-shell:
@@ -263,13 +282,31 @@ lint-shell:
 
 format:
 	@echo "Formatting source code..."
-	@which clang-format > /dev/null || { echo "Error: clang-format not installed"; exit 1; }
+	@if ! command -v clang-format >/dev/null 2>&1; then \
+		echo ""; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo "  ERROR: clang-format is not installed"; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo ""; \
+		echo "Please install clang-format to format C source code."; \
+		echo ""; \
+		exit 1; \
+	fi
 	@clang-format -i $(SRC) fib.h
 	@echo "✓ Code formatted"
 
 check-format:
 	@echo "Checking code formatting..."
-	@which clang-format > /dev/null || { echo "Error: clang-format not installed"; exit 1; }
+	@if ! command -v clang-format >/dev/null 2>&1; then \
+		echo ""; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo "  ERROR: clang-format is not installed"; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo ""; \
+		echo "Please install clang-format to check code formatting."; \
+		echo ""; \
+		exit 1; \
+	fi
 	@clang-format --dry-run -Werror $(SRC) fib.h
 	@echo "✓ Code formatting is correct"
 
@@ -280,7 +317,16 @@ analyze:
 
 cppcheck:
 	@echo "Running cppcheck..."
-	@which cppcheck > /dev/null || { echo "Error: cppcheck not installed"; exit 1; }
+	@if ! command -v cppcheck >/dev/null 2>&1; then \
+		echo ""; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo "  ERROR: cppcheck is not installed"; \
+		echo "════════════════════════════════════════════════════════"; \
+		echo ""; \
+		echo "Please install cppcheck to run static analysis."; \
+		echo ""; \
+		exit 1; \
+	fi
 	@cppcheck --enable=all --inconclusive --std=c99 $(SRC)
 
 # =============================================================================
@@ -291,41 +337,29 @@ check-deps:
 	@echo "Checking dependencies..."
 	@echo -n "  GMP library: "
 	@echo "#include <gmp.h>" | $(CC) -E - -o /dev/null 2>/dev/null && \
-		echo "✓ Found" || echo "✗ Not found (run 'make install-deps')"
+		echo "✓ Found" || echo "✗ Not found"
 	@echo -n "  GCC/Clang: "
 	@$(CC) --version > /dev/null 2>&1 && echo "✓ Found" || echo "✗ Not found"
 
 install-deps:
-ifeq ($(UNAME_S),Darwin)
-	@echo "Installing dependencies for macOS..."
-	@which brew > /dev/null || { echo "Error: Homebrew is not installed"; exit 1; }
-	@brew install gmp
-	@echo "Optional tools (recommended):"
-	@echo "  brew install clang-format cppcheck valgrind"
-else ifeq ($(UNAME_S),Linux)
-	@echo "Installing dependencies for Linux..."
-	@which apt-get > /dev/null && { \
-		sudo apt-get update && \
-		sudo apt-get install -y libgmp-dev build-essential; \
-		echo "Optional tools (recommended):"; \
-		echo "  sudo apt-get install clang-format cppcheck valgrind"; \
-	} || \
-	{ which dnf > /dev/null && { \
-		sudo dnf install -y gmp-devel gcc make; \
-		echo "Optional tools (recommended):"; \
-		echo "  sudo dnf install clang-tools-extra cppcheck valgrind"; \
-	} || \
-	{ which pacman > /dev/null && { \
-		sudo pacman -S --noconfirm gmp base-devel; \
-		echo "Optional tools (recommended):"; \
-		echo "  sudo pacman -S clang cppcheck valgrind"; \
-	} || \
-		{ echo "Could not detect a compatible package manager"; exit 1; }; }; }
-else
-	@echo "Incompatible operating system: $(UNAME_S)"
-	@exit 1
-endif
-	@echo "✓ Dependencies installed"
+	@echo "════════════════════════════════════════════════════════"
+	@echo "  Dependency Information"
+	@echo "════════════════════════════════════════════════════════"
+	@echo ""
+	@echo "Required dependencies:"
+	@echo "  - GMP library (libgmp)"
+	@echo "  - C compiler (gcc or clang)"
+	@echo ""
+	@echo "Optional development tools:"
+	@echo "  - clang-format    (code formatting)"
+	@echo "  - cppcheck        (static analysis)"
+	@echo "  - valgrind        (memory profiling)"
+	@echo "  - shellcheck      (shell script linting)"
+	@echo ""
+	@echo "Please use your system's package manager to install"
+	@echo "the required dependencies."
+	@echo ""
+	@echo "════════════════════════════════════════════════════════"
 
 # =============================================================================
 # Cleanup Targets

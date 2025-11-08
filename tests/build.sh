@@ -9,6 +9,33 @@ failed_tests=()
 
 cd ..
 
+# Check for required dependencies
+echo -e "${YELLOW}=== Checking Testing Dependencies ===${NC}"
+
+# Check if the fib executable exists
+if [ ! -f "./fib" ]; then
+  echo -e "${RED}✗ fib executable not found${NC}"
+  echo -e "\n${RED}ERROR: The 'fib' executable is missing${NC}"
+  echo -e "Please build the executable before running tests."
+  echo ""
+  exit 1
+else
+  echo -e "${GREEN}✓ fib executable found${NC}"
+fi
+
+# Check if the executable is actually executable
+if [ ! -x "./fib" ]; then
+  echo -e "${RED}✗ fib is not executable${NC}"
+  echo -e "\n${RED}ERROR: The 'fib' file exists but is not executable${NC}"
+  echo -e "Please set executable permissions on the file."
+  echo ""
+  exit 1
+else
+  echo -e "${GREEN}✓ fib is executable${NC}"
+fi
+
+echo ""
+
 run_test() {
   local number=$1
   local expected_result=$2
