@@ -340,24 +340,115 @@ check-deps:
 		echo "✓ Found" || echo "✗ Not found"
 	@echo -n "  GCC/Clang: "
 	@$(CC) --version > /dev/null 2>&1 && echo "✓ Found" || echo "✗ Not found"
+	@echo ""
+	@echo "Optional development tools:"
+	@echo -n "  clang-format: "
+	@command -v clang-format >/dev/null 2>&1 && echo "✓ Found" || echo "✗ Not found"
+	@echo -n "  cppcheck: "
+	@command -v cppcheck >/dev/null 2>&1 && echo "✓ Found" || echo "✗ Not found"
+	@echo -n "  valgrind: "
+	@command -v valgrind >/dev/null 2>&1 && echo "✓ Found" || echo "✗ Not found"
+	@echo -n "  shellcheck: "
+	@command -v shellcheck >/dev/null 2>&1 && echo "✓ Found" || echo "✗ Not found"
 
 install-deps:
 	@echo "════════════════════════════════════════════════════════"
-	@echo "  Dependency Information"
+	@echo "  Installing Build Dependencies"
 	@echo "════════════════════════════════════════════════════════"
 	@echo ""
-	@echo "Required dependencies:"
-	@echo "  - GMP library (libgmp)"
-	@echo "  - C compiler (gcc or clang)"
+ifeq ($(UNAME_S),Darwin)
+	@echo "Platform: macOS"
+	@if ! command -v brew >/dev/null 2>&1; then \
+		echo ""; \
+		echo "ERROR: Homebrew is not installed"; \
+		echo "Please install Homebrew to continue."; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "Installing GMP library..."
+	@brew install gmp
 	@echo ""
-	@echo "Optional development tools:"
-	@echo "  - clang-format    (code formatting)"
-	@echo "  - cppcheck        (static analysis)"
-	@echo "  - valgrind        (memory profiling)"
-	@echo "  - shellcheck      (shell script linting)"
+	@echo "✓ Build dependencies installed"
+else ifeq ($(UNAME_S),Linux)
+	@echo "Platform: Linux"
+	@if command -v apt-get >/dev/null 2>&1; then \
+		echo "Installing dependencies..."; \
+		sudo apt-get update && \
+		sudo apt-get install -y libgmp-dev build-essential; \
+		echo ""; \
+		echo "✓ Build dependencies installed"; \
+	elif command -v dnf >/dev/null 2>&1; then \
+		echo "Installing dependencies..."; \
+		sudo dnf install -y gmp-devel gcc make; \
+		echo ""; \
+		echo "✓ Build dependencies installed"; \
+	elif command -v pacman >/dev/null 2>&1; then \
+		echo "Installing dependencies..."; \
+		sudo pacman -S --noconfirm gmp base-devel; \
+		echo ""; \
+		echo "✓ Build dependencies installed"; \
+	else \
+		echo ""; \
+		echo "ERROR: Could not detect a compatible package manager"; \
+		echo "Please install GMP library and build tools manually."; \
+		echo ""; \
+		exit 1; \
+	fi
+else
+	@echo "ERROR: Unsupported operating system: $(UNAME_S)"
+	@exit 1
+endif
 	@echo ""
-	@echo "Please use your system's package manager to install"
-	@echo "the required dependencies."
+	@echo "════════════════════════════════════════════════════════"
+
+install-debug-deps: install-deps
+	@echo "════════════════════════════════════════════════════════"
+	@echo "  Installing Debug & Development Tools"
+	@echo "════════════════════════════════════════════════════════"
+	@echo ""
+ifeq ($(UNAME_S),Darwin)
+	@echo "Platform: macOS"
+	@if ! command -v brew >/dev/null 2>&1; then \
+		echo ""; \
+		echo "ERROR: Homebrew is not installed"; \
+		echo "Please install Homebrew to continue."; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "Installing development tools..."
+	@brew install clang-format cppcheck shellcheck
+	@echo ""
+	@echo "✓ Debug & development tools installed"
+	@echo ""
+	@echo "Note: valgrind may not be available or fully supported"
+else ifeq ($(UNAME_S),Linux)
+	@echo "Platform: Linux"
+	@if command -v apt-get >/dev/null 2>&1; then \
+		echo "Installing development tools..."; \
+		sudo apt-get install -y clang-format cppcheck valgrind shellcheck; \
+		echo ""; \
+		echo "✓ Debug & development tools installed"; \
+	elif command -v dnf >/dev/null 2>&1; then \
+		echo "Installing development tools..."; \
+		sudo dnf install -y clang-tools-extra cppcheck valgrind ShellCheck; \
+		echo ""; \
+		echo "✓ Debug & development tools installed"; \
+	elif command -v pacman >/dev/null 2>&1; then \
+		echo "Installing development tools..."; \
+		sudo pacman -S --noconfirm clang cppcheck valgrind shellcheck; \
+		echo ""; \
+		echo "✓ Debug & development tools installed"; \
+	else \
+		echo ""; \
+		echo "ERROR: Could not detect a compatible package manager"; \
+		echo "Please install development tools manually."; \
+		echo ""; \
+		exit 1; \
+	fi
+else
+	@echo "ERROR: Unsupported operating system: $(UNAME_S)"
+	@exit 1
+endif
 	@echo ""
 	@echo "════════════════════════════════════════════════════════"
 
@@ -432,10 +523,11 @@ help:
 	@echo "  coverage       - Build with coverage instrumentation"
 	@echo ""
 	@echo "Installation:"
-	@echo "  install        - Install binary to $(BINDIR)"
-	@echo "  uninstall      - Remove installed binary"
-	@echo "  install-deps   - Install system dependencies"
-	@echo "  check-deps     - Check if dependencies are installed"
+	@echo "  install            - Install binary to $(BINDIR)"
+	@echo "  uninstall          - Remove installed binary"
+	@echo "  install-deps       - Install build dependencies (GMP, compiler)"
+	@echo "  install-debug-deps - Install all dependencies including dev tools"
+	@echo "  check-deps         - Check if dependencies are installed"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test           - Run basic tests"
@@ -478,5 +570,5 @@ help:
         debug release profile asan ubsan msan tsan coverage \
         test test-full test-valgrind test-sanitizers asan-test ubsan-test \
         lint lint-c lint-shell format check-format analyze cppcheck \
-        install uninstall install-deps check-deps \
+        install uninstall install-deps install-debug-deps check-deps \
         info help
