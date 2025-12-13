@@ -7,7 +7,7 @@ typedef enum { ITERATIVE, RECURSIVE, MATRIX } Algorithm;
 typedef enum { DECIMAL, HEXADECIMAL, BINARY } OutputFormat;
 
 void calculate_fibonacci_iterative(mpz_t result, long n, int verbose);
-void calculate_fibonacci_recursive(mpz_t result, long n, mpz_t *memo, int verbose);
+void calculate_fibonacci_recursive(mpz_t result, long n, void *unused, int verbose);
 void calculate_fibonacci_matrix(mpz_t result, long n, int verbose);
 
 void matrix_multiply(mpz_t a11, mpz_t a12, mpz_t a21, mpz_t a22, mpz_t b11, mpz_t b12, mpz_t b21,

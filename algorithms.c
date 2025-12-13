@@ -35,7 +35,9 @@ void calculate_fibonacci_iterative(mpz_t result, long n, int verbose) {
   mpz_clear(c);
 }
 
-void calculate_fibonacci_recursive(mpz_t result, long n, mpz_t *memo, int verbose) {
+void calculate_fibonacci_recursive(mpz_t result, long n, void *unused, int verbose) {
+  (void) unused;  // Mark parameter as intentionally unused
+
   // Base cases
   if (n == 0) {
     mpz_set_ui(result, 0);
@@ -45,23 +47,31 @@ void calculate_fibonacci_recursive(mpz_t result, long n, mpz_t *memo, int verbos
     return;
   }
 
-  // Initialize base cases in memo
-  mpz_set_ui(memo[0], 0);
-  mpz_set_ui(memo[1], 1);
+  // Optimized approach: use only two temporary variables instead of full memo array
+  // This reduces memory usage from O(n) to O(1)
+  mpz_t a, b, temp;
+  mpz_init_set_ui(a, 0);  // F(0)
+  mpz_init_set_ui(b, 1);  // F(1)
+  mpz_init(temp);
 
-  // Build up the solution iteratively to avoid stack overflow
-  // This uses memoization in a bottom-up approach instead of top-down recursion
   for (long i = 2; i <= n; i++) {
     if (verbose && (i % 100 == 0 || i <= 10)) {
-      fprintf(stderr, "Computing F(%ld) with memoization...\n", i);
+      fprintf(stderr, "Computing F(%ld) with optimized algorithm...\n", i);
     }
 
     // F(i) = F(i-1) + F(i-2)
-    mpz_add(memo[i], memo[i - 1], memo[i - 2]);
+    mpz_add(temp, a, b);
+    mpz_set(a, b);
+    mpz_set(b, temp);
   }
 
   // Set the result
-  mpz_set(result, memo[n]);
+  mpz_set(result, b);
+
+  // Clean up temporary variables
+  mpz_clear(a);
+  mpz_clear(b);
+  mpz_clear(temp);
 }
 
 void calculate_fibonacci_matrix(mpz_t result, long n, int verbose) {

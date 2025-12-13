@@ -354,31 +354,8 @@ int main(int argc, char *argv[]) {
       calculate_fibonacci_iterative(result, limit, verbose);
       break;
     case RECURSIVE:
-      // Warn user about potential inefficiency for large values
-      if (limit > 1000000) {
-        fprintf(stderr, "Warning: Recursive method may be inefficient for n > 1000000\n");
-      }
-      {
-        // Allocate memoization array for recursive calculation
-        mpz_t *memo = (mpz_t *) malloc((limit + 1) * sizeof(mpz_t));
-        if (memo == NULL) {
-          fprintf(stderr, "Error: Memory allocation failed\n");
-          return EXIT_FAILURE;
-        }
-
-        // Initialize all memo array elements
-        for (long j = 0; j <= limit; j++) {
-          mpz_init(memo[j]);
-        }
-
-        calculate_fibonacci_recursive(result, limit, memo, verbose);
-
-        // Clean up memo array
-        for (long j = 0; j <= limit; j++) {
-          mpz_clear(memo[j]);
-        }
-        free(memo);
-      }
+      // Optimized recursive algorithm now uses O(1) memory
+      calculate_fibonacci_recursive(result, limit, NULL, verbose);
       break;
     case MATRIX:
       calculate_fibonacci_matrix(result, limit, verbose);
