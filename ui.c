@@ -8,8 +8,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <ncurses.h>
 
-#define MAX_INPUT_SIZE 100
+#define MAX_INPUT_SIZE 256
+#define MAX_NUMBER_LEN 32
 
 static char *my_strdup(const char *str) {
   size_t len = strlen(str) + 1;
@@ -20,315 +22,547 @@ static char *my_strdup(const char *str) {
   return new_str;
 }
 
-static long get_long_input(const char *prompt, long min_value, long max_value) {
-  char input[MAX_INPUT_SIZE];
-  long value;
-  char *endptr;
-  int valid = 0;
+typedef struct {
+  long fib_number;
+  char algorithm[16];
+  char format[16];
+  int show_time;
+  int time_only;
+  int raw_output;
+  int verbose;
+  char output_file[MAX_INPUT_SIZE];
+  int has_output_file;
+} UIConfig;
 
-  do {
-    printf("%s (between %ld and %ld): ", prompt, min_value, max_value);
+typedef enum {
+  FIELD_NUMBER,
+  FIELD_ALGORITHM,
+  FIELD_FORMAT,
+  FIELD_SHOW_TIME,
+  FIELD_TIME_ONLY,
+  FIELD_RAW_OUTPUT,
+  FIELD_VERBOSE,
+  FIELD_OUTPUT_FILE,
+  FIELD_CONFIRM,
+  FIELD_COUNT
+} FieldType;
 
-    if (!fgets(input, MAX_INPUT_SIZE, stdin)) {
-      printf("Error reading input. Please try again.\n");
-      continue;
-    }
-
-    size_t len = strlen(input);
-    if (len > 0 && input[len - 1] == '\n')
-      input[len - 1] = '\0';
-
-    if (input[0] == '\0') {
-      printf("Input cannot be empty. Please try again.\n");
-      continue;
-    }
-
-    errno = 0;
-    value = strtol(input, &endptr, 10);
-
-    if (errno == ERANGE) {
-      printf("Number out of range. Please try again.\n");
-      continue;
-    }
-
-    if (endptr == input || *endptr != '\0') {
-      printf("Invalid input. Please enter an integer.\n");
-      continue;
-    }
-
-    if (value < min_value || value > max_value) {
-      printf("Number must be between %ld and %ld. Please try again.\n", min_value, max_value);
-      continue;
-    }
-
-    valid = 1;
-  } while (!valid);
-
-  return value;
+static void init_colors(void) {
+  if (has_colors()) {
+    start_color();
+    use_default_colors();
+  }
 }
 
-static char *get_string_option(const char *prompt, const char *valid_options[], int num_options) {
-  char input[MAX_INPUT_SIZE];
-  int valid = 0;
-  int option_index = -1;
-
-  do {
-    printf("%s (", prompt);
-    for (int i = 0; i < num_options; i++) {
-      printf("%s", valid_options[i]);
-      if (i < num_options - 1)
-        printf("/");
-    }
-    printf("): ");
-
-    if (!fgets(input, MAX_INPUT_SIZE, stdin)) {
-      printf("Error reading input. Please try again.\n");
-      continue;
-    }
-
-    size_t len = strlen(input);
-    if (len > 0 && input[len - 1] == '\n')
-      input[len - 1] = '\0';
-
-    if (input[0] == '\0') {
-      printf("Input cannot be empty. Please try again.\n");
-      continue;
-    }
-
-    for (int i = 0; i < num_options; i++) {
-      if (strcmp(input, valid_options[i]) == 0) {
-        option_index = i;
-        valid = 1;
-        break;
-      }
-    }
-
-    if (!valid) {
-      printf("Invalid option. Please try again.\n");
-    }
-  } while (!valid);
-
-  return my_strdup(valid_options[option_index]);
+static void draw_header(WINDOW *win) {
+  int max_y, max_x;
+  getmaxyx(win, max_y, max_x);
+  (void)max_y; // unused
+  
+  const char *title = "FIB.C";
+  int title_len = strlen(title);
+  int padding = (max_x - 4 - title_len) / 2;
+  
+  wattron(win, A_BOLD);
+  
+  // Title centered
+  mvwprintw(win, 1, 2 + padding, "%s", title);
+  
+  wattroff(win, A_BOLD);
 }
 
-static int get_yes_no(const char *prompt, int default_value) {
-  char input[MAX_INPUT_SIZE];
+static void draw_footer(WINDOW *win, int max_y) {
+  wattron(win, A_DIM);
+  mvwprintw(win, max_y - 2, 2, "Navigation: UP/DOWN or TAB | Edit: ENTER | Toggle: SPACE | Confirm: F");
+  mvwprintw(win, max_y - 1, 2, "Quit: Q or ESC");
+  wattroff(win, A_DIM);
+}
 
-  printf("%s (y/n) [%s]: ", prompt, default_value ? "y" : "n");
-
-  if (!fgets(input, MAX_INPUT_SIZE, stdin)) {
-    return default_value;
-  }
-
-  size_t len = strlen(input);
-  if (len > 0 && input[len - 1] == '\n')
-    input[len - 1] = '\0';
-
-  if (input[0] == '\0') {
-    return default_value;
-  }
-
-  for (int i = 0; input[i]; i++) {
-    input[i] = tolower((unsigned char) input[i]);
-  }
-
-  if (strcmp(input, "y") == 0 || strcmp(input, "yes") == 0) {
-    return 1;
+static void draw_field(WINDOW *win, int y, int x, const char *label, const char *value, 
+                      int is_selected, int max_width) {
+  if (is_selected) {
+    wattron(win, A_BOLD);
+    mvwprintw(win, y, x, "> ");
   } else {
+    mvwprintw(win, y, x, "  ");
+  }
+  
+  wprintw(win, "%-25s: ", label);
+  
+  if (is_selected) {
+    wattron(win, A_REVERSE);
+  }
+  
+  wprintw(win, "%-*s", max_width, value);
+  
+  if (is_selected) {
+    wattroff(win, A_REVERSE);
+  }
+  wattroff(win, A_BOLD);
+}
+
+static void draw_toggle_field(WINDOW *win, int y, int x, const char *label, 
+                             int value, int is_selected) {
+  if (is_selected) {
+    wattron(win, A_BOLD);
+    mvwprintw(win, y, x, "> ");
+  } else {
+    mvwprintw(win, y, x, "  ");
+  }
+  
+  wprintw(win, "%-25s: ", label);
+  
+  if (is_selected) {
+    wattron(win, A_REVERSE);
+  } else if (value) {
+    wattron(win, A_BOLD);
+  }
+  
+  wprintw(win, "[%c] %s", value ? 'X' : ' ', value ? "Yes" : "No");
+  
+  if (is_selected) {
+    wattroff(win, A_REVERSE);
+  } else if (value) {
+    wattroff(win, A_BOLD);
+  }
+  wattroff(win, A_BOLD);
+}
+
+static void draw_ui(WINDOW *win, UIConfig *config, int selected_field) {
+  int max_y, max_x;
+  getmaxyx(win, max_y, max_x);
+  
+  wclear(win);
+  box(win, 0, 0);
+  
+  draw_header(win);
+  
+  int y = 4;
+  char number_str[MAX_NUMBER_LEN];
+  snprintf(number_str, MAX_NUMBER_LEN, "%ld", config->fib_number);
+  draw_field(win, y++, 4, "Fibonacci Number", number_str, 
+            selected_field == FIELD_NUMBER, 15);
+  
+  y++;
+  draw_field(win, y++, 4, "Algorithm", config->algorithm, 
+            selected_field == FIELD_ALGORITHM, 15);
+  
+  draw_field(win, y++, 4, "Output Format", config->format, 
+            selected_field == FIELD_FORMAT, 15);
+  
+  y++;
+  draw_toggle_field(win, y++, 4, "Show Calculation Time", config->show_time,
+                   selected_field == FIELD_SHOW_TIME);
+  
+  if (config->show_time) {
+    draw_toggle_field(win, y++, 4, "  Time Only (no result)", config->time_only,
+                     selected_field == FIELD_TIME_ONLY);
+  } else {
+    y++;
+  }
+  
+  y++;
+  draw_toggle_field(win, y++, 4, "Raw Output", config->raw_output,
+                   selected_field == FIELD_RAW_OUTPUT);
+  
+  draw_toggle_field(win, y++, 4, "Verbose Mode", config->verbose,
+                   selected_field == FIELD_VERBOSE);
+  
+  y++;
+  const char *file_display = config->has_output_file ? config->output_file : "(none)";
+  draw_field(win, y++, 4, "Output File", file_display,
+            selected_field == FIELD_OUTPUT_FILE, 30);
+  
+  y += 2;
+  
+  if (selected_field == FIELD_CONFIRM) {
+    wattron(win, A_BOLD | A_REVERSE);
+    mvwprintw(win, y, max_x/2 - 8, "  [ GENERATE ]  ");
+    wattroff(win, A_BOLD | A_REVERSE);
+  } else {
+    wattron(win, A_BOLD);
+    mvwprintw(win, y, max_x/2 - 8, "  [ GENERATE ]  ");
+    wattroff(win, A_BOLD);
+  }
+  
+  draw_footer(win, max_y);
+  
+  wrefresh(win);
+}
+
+static int edit_number(WINDOW *win, long *value, long min_val, long max_val) {
+  char buffer[MAX_NUMBER_LEN];
+  int max_y, max_x;
+  getmaxyx(win, max_y, max_x);
+  
+  WINDOW *input_win = newwin(5, 50, max_y/2 - 2, max_x/2 - 25);
+  wclear(input_win);
+  box(input_win, 0, 0);
+  
+  wattron(input_win, A_BOLD);
+  mvwprintw(input_win, 1, 2, "Enter number (%ld - %ld):", min_val, max_val);
+  wattroff(input_win, A_BOLD);
+  
+  mvwprintw(input_win, 3, 2, "ESC to cancel");
+  
+  curs_set(1);
+  noecho();
+  
+  mvwprintw(input_win, 2, 2, "> ");
+  wrefresh(input_win);
+  
+  int ch, pos = 0;
+  buffer[0] = '\0';
+  
+  while ((ch = wgetch(input_win)) != '\n' && ch != 27) {
+    if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) {
+      if (pos > 0) {
+        pos--;
+        buffer[pos] = '\0';
+        mvwprintw(input_win, 2, 2, ">                                          ");
+        mvwprintw(input_win, 2, 2, "> %s", buffer);
+        wrefresh(input_win);
+      }
+    } else if (isdigit(ch) && pos < MAX_NUMBER_LEN - 1) {
+      buffer[pos++] = ch;
+      buffer[pos] = '\0';
+      mvwprintw(input_win, 2, 4 + pos - 1, "%c", buffer[pos - 1]);
+      wrefresh(input_win);
+    }
+  }
+  
+  noecho();
+  curs_set(0);
+  delwin(input_win);
+  touchwin(win);
+  wrefresh(win);
+  
+  if (ch == 27 || buffer[0] == '\0') {
     return 0;
   }
+  
+  char *endptr;
+  long num = strtol(buffer, &endptr, 10);
+  
+  if (*endptr != '\0' || num < min_val || num > max_val) {
+    return 0;
+  }
+  
+  *value = num;
+  return 1;
 }
 
-static char *get_filename(const char *prompt, int allow_empty) {
-  char input[MAX_INPUT_SIZE];
-  int valid = 0;
-
-  do {
-    printf("%s%s: ", prompt, allow_empty ? " (press Enter to skip)" : "");
-
-    if (!fgets(input, MAX_INPUT_SIZE, stdin)) {
-      printf("Error reading input. Please try again.\n");
-      continue;
-    }
-
-    size_t len = strlen(input);
-    if (len > 0 && input[len - 1] == '\n')
-      input[len - 1] = '\0';
-
-    if (input[0] == '\0') {
-      if (allow_empty) {
-        return NULL;
-      } else {
-        printf("Input cannot be empty. Please try again.\n");
-        continue;
+static int edit_string(WINDOW *win, char *buffer, int max_len, const char *prompt) {
+  int max_y, max_x;
+  getmaxyx(win, max_y, max_x);
+  
+  WINDOW *input_win = newwin(5, 60, max_y/2 - 2, max_x/2 - 30);
+  wclear(input_win);
+  box(input_win, 0, 0);
+  
+  wattron(input_win, A_BOLD);
+  mvwprintw(input_win, 1, 2, "%s", prompt);
+  wattroff(input_win, A_BOLD);
+  
+  mvwprintw(input_win, 3, 2, "ESC to cancel | ENTER when done");
+  
+  curs_set(1);
+  noecho();
+  
+  mvwprintw(input_win, 2, 2, "> ");
+  wrefresh(input_win);
+  
+  char temp[MAX_INPUT_SIZE] = "";
+  int ch, pos = 0;
+  
+  while ((ch = wgetch(input_win)) != '\n' && ch != 27) {
+    if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) {
+      if (pos > 0) {
+        pos--;
+        temp[pos] = '\0';
+        mvwprintw(input_win, 2, 2, ">                                                    ");
+        mvwprintw(input_win, 2, 2, "> %s", temp);
+        wrefresh(input_win);
       }
+    } else if (pos < max_len - 1 && ch >= 32 && ch < 127) {
+      temp[pos++] = ch;
+      temp[pos] = '\0';
+      mvwprintw(input_win, 2, 4 + pos - 1, "%c", temp[pos - 1]);
+      wrefresh(input_win);
     }
+  }
+  
+  noecho();
+  curs_set(0);
+  delwin(input_win);
+  touchwin(win);
+  wrefresh(win);
+  
+  if (ch == 27) {
+    return 0;
+  }
+  
+  if (temp[0] != '\0') {
+    strncpy(buffer, temp, max_len - 1);
+    buffer[max_len - 1] = '\0';
+    return 1;
+  }
+  
+  return 0;
+}
 
-    valid = 1;
-  } while (!valid);
+static void cycle_algorithm(char *algorithm) {
+  if (strcmp(algorithm, "iter") == 0) {
+    strcpy(algorithm, "recur");
+  } else if (strcmp(algorithm, "recur") == 0) {
+    strcpy(algorithm, "matrix");
+  } else {
+    strcpy(algorithm, "iter");
+  }
+}
 
-  return my_strdup(input);
+static void cycle_format(char *format) {
+  if (strcmp(format, "dec") == 0) {
+    strcpy(format, "hex");
+  } else if (strcmp(format, "hex") == 0) {
+    strcpy(format, "bin");
+  } else {
+    strcpy(format, "dec");
+  }
 }
 
 /**
- * Runs the interactive user interface for the Fibonacci calculator.
+ * Runs the interactive Terminal User Interface (TUI) for the Fibonacci calculator.
  *
- * This function provides a comprehensive interactive interface that guides users
- * through all available options for calculating Fibonacci numbers. It collects
- * user preferences and constructs command-line arguments accordingly.
+ * This function provides a modern, ncurses-based interface with:
+ * - Real-time visual feedback
+ * - Keyboard navigation (arrows, tab, space, enter)
+ * - Color-coded display elements
+ * - Interactive field editing
  *
- * argc Pointer to the argument count, which will be updated with the new count
+ * argc Pointer to the argument count, which will be updated
  * argv Pointer to the argument vector, which will be replaced with newly generated arguments
- *
- * The function performs the following steps:
- * 1. Prompts the user for the Fibonacci number to calculate (0-1000000)
- * 2. Allows selection of calculation algorithm (iter, recur, or matrix)
- * 3. Allows selection of output format (dec, hex, or bin)
- * 4. Configures timing options (show time, time-only mode)
- * 5. Configures output options (raw output, verbose mode)
- * 6. Optionally specifies an output file
- * 7. Constructs a new argv array based on user choices
- * 8. Updates argc and argv pointers with the new values
  */
 void run_user_interface(int *argc, char ***argv) {
-  printf("\n===== fib =====\n\n");
-
-  // Step 1: Get the Fibonacci number to calculate
-  long fib_number = get_long_input("Enter the Fibonacci number to calculate", 0, 1000000);
-
-  // Step 2: Configure the calculation algorithm
-  // Available algorithms: iterative (default), recursive, and matrix-based
-  const char *algorithm_options[] = {"iter", "recur", "matrix"};
-  printf("Algorithm: 'iter' is the default\n");
-  char *algorithm = my_strdup("iter");
-  printf("Selected algorithm: %s\n", algorithm);
-
-  if (get_yes_no("Do you want to change the algorithm?", 0)) {
-    free(algorithm);
-    algorithm = get_string_option("Choose algorithm", algorithm_options, 3);
-  }
-
-  // Step 3: Configure the output format
-  // Available formats: decimal (default), hexadecimal, and binary
-  const char *format_options[] = {"dec", "hex", "bin"};
-  printf("Format: 'dec' is the default\n");
-  char *format = my_strdup("dec");
-  printf("Selected format: %s\n", format);
-
-  if (get_yes_no("Do you want to change the output format?", 0)) {
-    free(format);
-    format = get_string_option("Choose output format", format_options, 3);
-  }
-
-  // Step 4: Configure timing options
-  // Users can choose to display calculation time, or only show time without the result
-  int show_time = get_yes_no("Do you want to show calculation time?", 0);
-
-  int time_only = 0;
-  if (show_time) {
-    time_only = get_yes_no("Do you want to show ONLY the time (skip result output)?", 0);
-  }
-
-  // Step 5: Configure output display options
-  // Raw output shows only the number, verbose shows detailed calculation info
-  int raw_output = get_yes_no("Do you want to show only the raw number?", 0);
-
-  int verbose = get_yes_no("Do you want to show detailed calculation information?", 0);
-
-  // Step 6: Configure optional output file
-  // If specified, results will be written to a file instead of stdout
-  // Note: The path will be validated by validate_output_path() in main()
-  // to prevent tainted path vulnerabilities (CWE-73)
-  char *output_file = get_filename("Enter the output file name", 1);
-
-  // Step 7: Calculate the number of arguments needed
-  // Start with 2 (program name + fibonacci number)
-  int new_argc = 2;
-  if (strcmp(algorithm, "iter") != 0)
-    new_argc += 2;  // -a <algorithm>
-  if (strcmp(format, "dec") != 0)
-    new_argc += 2;  // -f <format>
-  if (show_time)
-    new_argc += 1;  // -t flag
-  if (time_only)
-    new_argc += 1;  // -T flag
-  if (raw_output)
-    new_argc += 1;  // -r flag
-  if (verbose)
-    new_argc += 1;  // -v flag
-  if (output_file)
-    new_argc += 2;  // -o <filename>
-
-  // Step 8: Allocate memory for the new argument array
-  char **new_argv = (char **) malloc(new_argc * sizeof(char *));
-  if (!new_argv) {
-    fprintf(stderr, "Error: Could not allocate memory for arguments\n");
+  UIConfig config = {
+    .fib_number = 10,
+    .show_time = 0,
+    .time_only = 0,
+    .raw_output = 0,
+    .verbose = 0,
+    .has_output_file = 0
+  };
+  strcpy(config.algorithm, "iter");
+  strcpy(config.format, "dec");
+  config.output_file[0] = '\0';
+  
+  initscr();
+  clear();
+  refresh();
+  cbreak();
+  noecho();
+  curs_set(0);
+  keypad(stdscr, TRUE);
+  
+  init_colors();
+  
+  int max_y, max_x;
+  getmaxyx(stdscr, max_y, max_x);
+  
+  if (max_y < 24 || max_x < 76) {
+    endwin();
+    fprintf(stderr, "Error: Terminal too small. Need at least 76x24, have %dx%d\n", 
+            max_x, max_y);
     exit(EXIT_FAILURE);
   }
-
-  // Step 9: Build the new argument array
-  // First argument is always the program name
+  
+  WINDOW *main_win = newwin(max_y - 2, max_x - 4, 1, 2);
+  keypad(main_win, TRUE);
+  
+  int selected_field = FIELD_NUMBER;
+  int running = 1;
+  
+  while (running) {
+    draw_ui(main_win, &config, selected_field);
+    
+    int ch = wgetch(main_win);
+    
+    // Handle terminal resize
+    if (ch == KEY_RESIZE) {
+      getmaxyx(stdscr, max_y, max_x);
+      
+      if (max_y < 24 || max_x < 76) {
+        // Terminal became too small
+        delwin(main_win);
+        endwin();
+        fprintf(stderr, "Error: Terminal too small. Need at least 76x24, have %dx%d\n", 
+                max_x, max_y);
+        exit(EXIT_FAILURE);
+      }
+      
+      // Recreate window with new dimensions
+      delwin(main_win);
+      clear();
+      refresh();
+      main_win = newwin(max_y - 2, max_x - 4, 1, 2);
+      keypad(main_win, TRUE);
+      continue;
+    }
+    
+    switch (ch) {
+      case 'q':
+      case 'Q':
+      case 27: // ESC
+        delwin(main_win);
+        endwin();
+        exit(0);
+        break;
+        
+      case KEY_UP:
+      case 'k':
+        selected_field = (selected_field - 1 + FIELD_COUNT) % FIELD_COUNT;
+        if (!config.show_time && selected_field == FIELD_TIME_ONLY) {
+          selected_field = (selected_field - 1 + FIELD_COUNT) % FIELD_COUNT;
+        }
+        break;
+        
+      case KEY_DOWN:
+      case 'j':
+      case 9: // TAB
+        selected_field = (selected_field + 1) % FIELD_COUNT;
+        if (!config.show_time && selected_field == FIELD_TIME_ONLY) {
+          selected_field = (selected_field + 1) % FIELD_COUNT;
+        }
+        break;
+        
+      case ' ': // SPACE - toggle boolean fields or cycle options
+        switch (selected_field) {
+          case FIELD_ALGORITHM:
+            cycle_algorithm(config.algorithm);
+            break;
+          case FIELD_FORMAT:
+            cycle_format(config.format);
+            break;
+          case FIELD_SHOW_TIME:
+            config.show_time = !config.show_time;
+            if (!config.show_time) {
+              config.time_only = 0;
+            }
+            break;
+          case FIELD_TIME_ONLY:
+            if (config.show_time) {
+              config.time_only = !config.time_only;
+            }
+            break;
+          case FIELD_RAW_OUTPUT:
+            config.raw_output = !config.raw_output;
+            break;
+          case FIELD_VERBOSE:
+            config.verbose = !config.verbose;
+            break;
+          case FIELD_OUTPUT_FILE:
+            config.has_output_file = !config.has_output_file;
+            if (!config.has_output_file) {
+              config.output_file[0] = '\0';
+            }
+            break;
+        }
+        break;
+        
+      case '\n':
+      case KEY_ENTER:
+        switch (selected_field) {
+          case FIELD_NUMBER:
+            edit_number(main_win, &config.fib_number, 0, 1000000);
+            break;
+          case FIELD_ALGORITHM:
+            cycle_algorithm(config.algorithm);
+            break;
+          case FIELD_FORMAT:
+            cycle_format(config.format);
+            break;
+          case FIELD_OUTPUT_FILE:
+            if (config.has_output_file || config.output_file[0] == '\0') {
+              if (edit_string(main_win, config.output_file, MAX_INPUT_SIZE, 
+                            "Enter output filename:")) {
+                config.has_output_file = 1;
+              }
+            } else {
+              config.has_output_file = 0;
+              config.output_file[0] = '\0';
+            }
+            break;
+          case FIELD_CONFIRM:
+            running = 0;
+            break;
+        }
+        break;
+        
+      case 'f':
+      case 'F':
+        running = 0;
+        break;
+    }
+  }
+  
+  delwin(main_win);
+  endwin();
+  
+  // Build command-line arguments from config
+  int new_argc = 2; // program name + number
+  if (strcmp(config.algorithm, "iter") != 0) new_argc += 2;
+  if (strcmp(config.format, "dec") != 0) new_argc += 2;
+  if (config.show_time) new_argc += 1;
+  if (config.time_only) new_argc += 1;
+  if (config.raw_output) new_argc += 1;
+  if (config.verbose) new_argc += 1;
+  if (config.has_output_file && config.output_file[0] != '\0') new_argc += 2;
+  
+  char **new_argv = (char **)malloc(new_argc * sizeof(char *));
+  if (!new_argv) {
+    fprintf(stderr, "Error: Memory allocation failed\n");
+    exit(EXIT_FAILURE);
+  }
+  
   new_argv[0] = my_strdup((*argv)[0]);
-
-  // Second argument is the Fibonacci number
-  char number_str[32];
-  sprintf(number_str, "%ld", fib_number);
+  
+  char number_str[MAX_NUMBER_LEN];
+  snprintf(number_str, MAX_NUMBER_LEN, "%ld", config.fib_number);
   new_argv[1] = my_strdup(number_str);
-
+  
   int arg_index = 2;
-
-  // Add algorithm option if not using default
-  if (strcmp(algorithm, "iter") != 0) {
+  
+  if (strcmp(config.algorithm, "iter") != 0) {
     new_argv[arg_index++] = my_strdup("-a");
-    new_argv[arg_index++] = my_strdup(algorithm);
+    new_argv[arg_index++] = my_strdup(config.algorithm);
   }
-
-  // Add format option if not using default
-  if (strcmp(format, "dec") != 0) {
+  
+  if (strcmp(config.format, "dec") != 0) {
     new_argv[arg_index++] = my_strdup("-f");
-    new_argv[arg_index++] = my_strdup(format);
+    new_argv[arg_index++] = my_strdup(config.format);
   }
-
-  // Add timing flags if requested
-  if (show_time)
+  
+  if (config.show_time) {
     new_argv[arg_index++] = my_strdup("-t");
-  if (time_only)
-    new_argv[arg_index++] = my_strdup("-T");
-
-  // Add output display flags if requested
-  if (raw_output)
-    new_argv[arg_index++] = my_strdup("-r");
-  if (verbose)
-    new_argv[arg_index++] = my_strdup("-v");
-
-  // Add output file option if specified
-  // Note: User input from get_filename() will be validated by
-  // validate_output_path() when processed by main() to prevent
-  // tainted path vulnerabilities (CWE-73)
-  if (output_file) {
-    new_argv[arg_index++] = my_strdup("-o");
-    new_argv[arg_index++] = my_strdup(output_file);
-    free(output_file);
   }
-
-  // Step 10: Display configuration summary to the user
-  printf("\n===== Configuration Summary =====\n");
-  printf("Fibonacci Number: %ld\n", fib_number);
-  printf("Algorithm: %s\n", algorithm);
-  printf("Format: %s\n", format);
-  printf("Show time: %s\n", show_time ? "Yes" : "No");
-  printf("Time only (no result): %s\n", time_only ? "Yes" : "No");
-  printf("Raw output: %s\n", raw_output ? "Yes" : "No");
-  printf("Detailed information: %s\n", verbose ? "Yes" : "No");
-  printf("Output file: %s\n", output_file ? output_file : "No (standard output)");
-  printf("\nProcessing...\n\n");
-
-  // Clean up temporary strings that are no longer needed
-  free(algorithm);
-  free(format);
-
-  // Step 11: Update the caller's argc and argv with the new values
-  // This allows the main program to process the constructed arguments
+  
+  if (config.time_only) {
+    new_argv[arg_index++] = my_strdup("-T");
+  }
+  
+  if (config.raw_output) {
+    new_argv[arg_index++] = my_strdup("-r");
+  }
+  
+  if (config.verbose) {
+    new_argv[arg_index++] = my_strdup("-v");
+  }
+  
+  if (config.has_output_file && config.output_file[0] != '\0') {
+    new_argv[arg_index++] = my_strdup("-o");
+    new_argv[arg_index++] = my_strdup(config.output_file);
+  }
+  
   *argc = new_argc;
   *argv = new_argv;
 }

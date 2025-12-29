@@ -23,7 +23,7 @@ DEP = $(SRC:.c=.d)
 TARGET = $(PROJECT_NAME)
 
 # Libraries
-LIBS = -lgmp
+LIBS = -lgmp -lncurses
 
 # Detect operating system
 UNAME_S := $(shell uname -s)
