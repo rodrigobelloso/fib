@@ -154,8 +154,18 @@ int load_history(HistoryEntry **history, int *count) {
     return 0;
   }
 
-  // Safe to allocate: count is validated to be in range [1, MAX_HISTORY_ENTRIES]
-  *history = malloc((size_t) *count * sizeof(HistoryEntry));
+  // Additional check to prevent integer overflow and excessive allocation
+  // Calculate allocation size safely
+  size_t alloc_size = (size_t) *count * sizeof(HistoryEntry);
+  const size_t MAX_ALLOC_SIZE = MAX_HISTORY_ENTRIES * sizeof(HistoryEntry);
+  if (alloc_size > MAX_ALLOC_SIZE || alloc_size / sizeof(HistoryEntry) != (size_t) *count) {
+    fclose(fp);
+    *count = 0;
+    return -1;
+  }
+
+  // Safe to allocate: count is validated and allocation size is checked
+  *history = malloc(alloc_size);
   if (!*history) {
     fclose(fp);
     *count = 0;
