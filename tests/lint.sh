@@ -9,6 +9,41 @@ failed_checks=()
 TMPFILE=$(mktemp)
 trap 'rm -f $TMPFILE' EXIT
 
+# Check for required dependencies
+echo -e "${YELLOW}=== Checking Testing Dependencies ===${NC}"
+
+missing_deps=()
+
+# Check for shellcheck
+if ! command -v shellcheck &> /dev/null; then
+  echo -e "${RED}✗ shellcheck not found${NC}"
+  missing_deps+=("shellcheck")
+else
+  echo -e "${GREEN}✓ shellcheck found${NC}"
+fi
+
+# Check for clang-format
+if ! command -v clang-format &> /dev/null; then
+  echo -e "${RED}✗ clang-format not found${NC}"
+  missing_deps+=("clang-format")
+else
+  echo -e "${GREEN}✓ clang-format found${NC}"
+fi
+
+# Exit if dependencies are missing
+if [ ${#missing_deps[@]} -gt 0 ]; then
+  echo -e "\n${RED}ERROR: Missing required dependencies${NC}"
+  echo -e "The following tools are required to run lint tests:\n"
+  for dep in "${missing_deps[@]}"; do
+    echo -e "  - ${YELLOW}$dep${NC}"
+  done
+  echo -e "\nPlease install the missing dependencies to continue."
+  echo ""
+  exit 1
+fi
+
+echo ""
+
 cd ..
 
 echo -e "${YELLOW}=== Source Code Analysis ===${NC}"

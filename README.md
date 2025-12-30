@@ -1,4 +1,4 @@
-[![GitHub Actions tests](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml) [![GitHub License](https://img.shields.io/badge/License-GPL_3.0-yellow.svg)](./LICENSE)
+[![GitHub Actions build and test](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/build.yml) [![GitHub Actions CodeQL](https://github.com/rodrigobelloso/fib/actions/workflows/codeql.yml/badge.svg)](https://github.com/rodrigobelloso/fib/actions/workflows/codeql.yml) [![GitHub License](https://img.shields.io/badge/License-GPL_3.0-yellow.svg)](./LICENSE)
 
 # fib
 
@@ -12,17 +12,28 @@ fib calculates Fibonacci numbers up to a specified limit using arbitrary-precisi
 
 - C compiler supporting C99 or higher
 - GMP library (GNU Multiple Precision Arithmetic)
+- ncurses library (for Terminal User Interface)
 - Make (for easier compilation)
 
 ## Installation of Dependencies:
 
 ### Automatically:
 
-fib includes a make file to install required dependencies:
+fib includes a Makefile to install required dependencies:
 
 ```sh
+# Install only build dependencies (GMP, ncurses libraries, compiler tools)
 make install-deps
+
+# Install all dependencies including development tools
+# (clang-format, cppcheck, valgrind, shellcheck)
+make install-debug-deps
+
+# Check which dependencies are installed
+make check-deps
 ```
+
+**Note:** The Makefile automatically detects your package manager (Homebrew, apt-get, dnf, or pacman) and installs the appropriate packages.
 
 ### Manually:
 
@@ -30,39 +41,200 @@ Install dependencies manually by executing:
 
 ```sh
 # On Debian/Ubuntu based systems
-apt install libgmp-dev
+sudo apt install libgmp-dev libncurses-dev
+
+# On Fedora/RHEL based systems
+sudo dnf install gmp-devel ncurses-devel
+
+# On Arch Linux
+sudo pacman -S gmp ncurses
 
 # On macOS with Homebrew
-brew install gmp
+brew install gmp ncurses
 ```
 
 ## Building from source:
 
 ### Automatically:
 
-fib uses a `makefile` for easier compilation:
+fib uses a comprehensive `Makefile` for building and managing the project. The Makefile automatically detects your platform (macOS/Linux) and adjusts paths for GMP accordingly.
+
+#### Basic Build Commands:
 
 ```sh
-# Build the project
+# Build the project (default target)
 make
+# or
+make all
 
-# Clean object files and executables
-make clean
+# Get help about all available commands
+make help
 
-# Clean only object files
-make cleanobj
-
-# Build with debug information
-make debug
+# Display project information and configuration
+make info
 
 # Rebuild the project (clean and then build)
 make rebuild
-
-# Run basic tests
-make test
 ```
 
-_The `makefile` will automatically detect your platform and will adjust the path for GMP accordingly._
+#### Build Variants:
+
+The Makefile supports multiple build configurations:
+
+```sh
+# Build with debug symbols and no optimization
+make debug
+
+# Build optimized release version (-O3, strip symbols)
+make release
+
+# Build with profiling support (for gprof)
+make profile
+
+# Build with AddressSanitizer (detect memory errors)
+make asan
+
+# Build with UndefinedBehaviorSanitizer
+make ubsan
+
+# Build with MemorySanitizer
+make msan
+
+# Build with ThreadSanitizer
+make tsan
+
+# Build with coverage instrumentation
+make coverage
+```
+
+#### Testing:
+
+```sh
+# Run basic tests
+make test
+
+# Run comprehensive test suite
+make test-full
+
+# Run tests with Valgrind (memory leak detection)
+# Note: Requires valgrind to be installed
+make test-valgrind
+
+# Run tests with all sanitizers
+make test-sanitizers
+```
+
+**Test Dependencies:**
+
+- `test` and `test-full` require the `fib` executable to be built
+- `test-valgrind` requires valgrind to be installed
+- Test scripts automatically check for required dependencies and provide clear error messages if missing
+
+#### Code Quality:
+
+```sh
+# Run all linters (C code + shell scripts)
+make lint
+
+# Run C code linter (clang-format check)
+# Note: Skips gracefully if clang-format is not installed
+make lint-c
+
+# Run shell script linter
+# Note: Requires shellcheck and clang-format
+make lint-shell
+
+# Format source code with clang-format
+# Note: Requires clang-format to be installed
+make format
+
+# Check if code is properly formatted
+# Note: Requires clang-format to be installed
+make check-format
+
+# Run static analysis with clang
+make analyze
+
+# Run cppcheck static analyzer
+# Note: Requires cppcheck to be installed
+make cppcheck
+```
+
+**Code Quality Dependencies:**
+
+- All code quality targets check for required tools before running
+- Missing tools result in clear error messages with guidance
+- `lint-c` will skip checks gracefully if clang-format is missing
+- Other targets will exit with an error if their required tool is missing
+
+#### Dependency Management:
+
+```sh
+# Check if dependencies are installed
+make check-deps
+
+# Install only build dependencies (GMP library, compiler tools)
+make install-deps
+
+# Install all dependencies including development tools
+# (clang-format, cppcheck, valgrind, shellcheck)
+make install-debug-deps
+```
+
+**Dependency Checking:**
+
+- All Makefile targets that require specific tools now check for their availability
+- If a required tool is missing, a clear error message is displayed
+- Test scripts (`tests/build.sh` and `tests/lint.sh`) validate dependencies before running
+- No more confusing "command not found" errors
+
+**What gets installed:**
+
+- `install-deps`: GMP library, build-essential/base-devel
+- `install-debug-deps`: All of the above plus clang-format, cppcheck, valgrind, shellcheck
+
+#### Installation:
+
+```sh
+# Install binary to /usr/local/bin (default)
+make install
+
+# Install to a custom prefix
+make PREFIX=/opt install
+
+# Uninstall the binary
+make uninstall
+```
+
+#### Cleanup:
+
+```sh
+# Remove build artifacts (objects, executables, coverage files)
+make clean
+
+# Remove only object files
+make cleanobj
+
+# Deep clean (remove all generated files)
+make distclean
+```
+
+#### Advanced Usage:
+
+You can customize the build by setting variables:
+
+```sh
+# Build with custom optimization level
+make OPT_LEVEL=-O3
+
+# Build with custom compiler
+make CC=clang
+
+# Build with custom prefix
+make PREFIX=/opt
+```
+
+_The Makefile automatically detects your platform and adjusts compilation flags accordingly. On macOS, it uses Homebrew paths for GMP; on Linux, it uses system paths._
 
 ### Manually:
 
