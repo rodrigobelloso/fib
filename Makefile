@@ -1,5 +1,5 @@
 PROJECT_NAME = fib
-VERSION = 0.1.0
+VERSION = 0.2.0
 AUTHOR = Rodrigo Belloso
 
 # Compiler and tools
@@ -44,7 +44,7 @@ BASE_CFLAGS += -Wcast-align -Wstrict-prototypes -Wmissing-prototypes
 OPT_LEVEL ?= -O2
 
 # Default CFLAGS
-CFLAGS = $(BASE_CFLAGS) $(OPT_LEVEL)
+CFLAGS = $(BASE_CFLAGS) $(OPT_LEVEL) -DVERSION=\"$(VERSION)\"
 
 # Platform-specific settings
 ifeq ($(UNAME_S),Darwin)

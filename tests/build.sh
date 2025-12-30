@@ -401,7 +401,7 @@ fi
 ((total_tests++))
 
 echo -n "Testing with -o flag: "
-temp_output_file=$(mktemp)
+temp_output_file="/tmp/fib_test_o_$$.txt"
 ./fib -o "$temp_output_file" 20
 exit_code=$?
 
@@ -429,7 +429,7 @@ fi
 ((total_tests++))
 
 echo -n "Testing with --output flag: "
-temp_output_file=$(mktemp)
+temp_output_file="/tmp/fib_test_output_$$.txt"
 ./fib --output "$temp_output_file" 20
 exit_code=$?
 
@@ -453,6 +453,131 @@ else
     echo -e "${RED}FAILED: Output file not created${NC}"
     failed_tests+=("Long output file test - File not created")
   fi
+fi
+((total_tests++))
+
+echo -e "\n=== Security validation tests ==="
+echo -n "Testing path traversal prevention (../../../etc/passwd): "
+output=$(./fib -o "../../../etc/passwd" 10 2>&1)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  if echo "$output" | grep -q "Path traversal detected"; then
+    echo -e "${GREEN}SUCCESS: Path traversal blocked${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Wrong error message for path traversal${NC}"
+    echo "  Expected error about path traversal"
+    echo "  Got: $output"
+    failed_tests+=("Path traversal test - Wrong error message")
+  fi
+else
+  echo -e "${RED}FAILED: Path traversal not blocked${NC}"
+  failed_tests+=("Path traversal test - Should have been blocked")
+fi
+((total_tests++))
+
+echo -n "Testing system directory write prevention (/etc/test): "
+output=$(./fib -o "/etc/test" 10 2>&1)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  if echo "$output" | grep -q "Cannot write to system directory\|Output path must be in current directory"; then
+    echo -e "${GREEN}SUCCESS: System directory write blocked${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Wrong error message for system directory${NC}"
+    echo "  Expected error about system directory or allowed paths"
+    echo "  Got: $output"
+    failed_tests+=("System directory test - Wrong error message")
+  fi
+else
+  echo -e "${RED}FAILED: System directory write not blocked${NC}"
+  failed_tests+=("System directory test - Should have been blocked")
+fi
+((total_tests++))
+
+echo -n "Testing /tmp directory (should succeed): "
+temp_test_file="/tmp/fib_test_$$.txt"
+./fib -o "$temp_test_file" 10 2>&1
+exit_code=$?
+
+if [ $exit_code -eq 0 ]; then
+  if [ -f "$temp_test_file" ]; then
+    echo -e "${GREEN}SUCCESS: /tmp write allowed${NC}"
+    ((passed_tests++))
+    rm -f "$temp_test_file"
+  else
+    echo -e "${RED}FAILED: /tmp write should succeed but file not created${NC}"
+    failed_tests+=("/tmp write test - File not created")
+  fi
+else
+  echo -e "${RED}FAILED: /tmp write should be allowed${NC}"
+  failed_tests+=("/tmp write test - Exit code $exit_code")
+fi
+((total_tests++))
+
+echo -n "Testing current directory write (should succeed): "
+temp_test_file="./fib_test_current_$$.txt"
+./fib -o "$temp_test_file" 10 2>&1
+exit_code=$?
+
+if [ $exit_code -eq 0 ]; then
+  if [ -f "$temp_test_file" ]; then
+    echo -e "${GREEN}SUCCESS: Current directory write allowed${NC}"
+    ((passed_tests++))
+    rm -f "$temp_test_file"
+  else
+    echo -e "${RED}FAILED: Current directory write should succeed but file not created${NC}"
+    failed_tests+=("Current directory write test - File not created")
+  fi
+else
+  echo -e "${RED}FAILED: Current directory write should be allowed${NC}"
+  failed_tests+=("Current directory write test - Exit code $exit_code")
+fi
+((total_tests++))
+
+echo -n "Testing home directory write (should succeed): "
+if [ -n "$HOME" ]; then
+  temp_test_file="$HOME/fib_test_home_$$.txt"
+  ./fib -o "$temp_test_file" 10 2>&1
+  exit_code=$?
+
+  if [ $exit_code -eq 0 ]; then
+    if [ -f "$temp_test_file" ]; then
+      echo -e "${GREEN}SUCCESS: Home directory write allowed${NC}"
+      ((passed_tests++))
+      rm -f "$temp_test_file"
+    else
+      echo -e "${RED}FAILED: Home directory write should succeed but file not created${NC}"
+      failed_tests+=("Home directory write test - File not created")
+    fi
+  else
+    echo -e "${RED}FAILED: Home directory write should be allowed${NC}"
+    failed_tests+=("Home directory write test - Exit code $exit_code")
+  fi
+else
+  echo -e "${YELLOW}SKIPPED: HOME environment variable not set${NC}"
+fi
+((total_tests++))
+
+echo -n "Testing double slash prevention (path//file): "
+output=$(./fib -o "test//file.txt" 10 2>&1)
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+  if echo "$output" | grep -q "Path traversal detected"; then
+    echo -e "${GREEN}SUCCESS: Double slash blocked${NC}"
+    ((passed_tests++))
+  else
+    echo -e "${RED}FAILED: Wrong error message for double slash${NC}"
+    echo "  Expected error about path traversal"
+    echo "  Got: $output"
+    failed_tests+=("Double slash test - Wrong error message")
+  fi
+else
+  echo -e "${RED}FAILED: Double slash not blocked${NC}"
+  failed_tests+=("Double slash test - Should have been blocked")
 fi
 ((total_tests++))
 
@@ -536,7 +661,7 @@ fi
 ((total_tests++))
 
 echo -n "Testing all flags together: "
-temp_output_file=$(mktemp)
+temp_output_file="/tmp/fib_test_all_flags_$$.txt"
 ./fib -a matrix -t -r -v -o "$temp_output_file" 15 2>/dev/null
 exit_code=$?
 

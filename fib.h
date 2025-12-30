@@ -2,9 +2,21 @@
 #define FIB_H
 
 #include <gmp.h>
+#include <time.h>
 
 typedef enum { ITERATIVE, RECURSIVE, MATRIX } Algorithm;
 typedef enum { DECIMAL, HEXADECIMAL, BINARY } OutputFormat;
+
+#define MAX_HISTORY_ENTRIES 100
+
+typedef struct {
+  long fib_number;
+  Algorithm algorithm;
+  OutputFormat format;
+  double calc_time;
+  time_t timestamp;
+  char result_preview[65];  // First 64 chars of result + null terminator
+} HistoryEntry;
 
 void calculate_fibonacci_iterative(mpz_t result, long n, int verbose);
 void calculate_fibonacci_recursive(mpz_t result, long n, void *unused, int verbose);
@@ -22,5 +34,14 @@ const char *get_format_prefix(OutputFormat format);
 
 void run_user_interface(int *argc, char ***argv);
 void free_generated_args(int argc, char **argv);
+
+// History management functions
+int load_history(HistoryEntry **history, int *count);
+int save_history(const HistoryEntry *history, int count);
+int add_to_history(long fib_number, Algorithm algorithm, OutputFormat format, double calc_time,
+                   const char *result_str);
+void display_history(void);
+const char *algorithm_to_string(Algorithm algo);
+const char *format_to_string(OutputFormat fmt);
 
 #endif

@@ -256,6 +256,11 @@ gcc fib.c algorithms.c matrix.c utils.c -o fib -I/opt/homebrew/include -L/opt/ho
 # or
 ./fib --help
 
+# Display calculation history
+./fib -y
+# or
+./fib --history
+
 # Calculate Fibonacci number using default algorithm (iterative)
 ./fib <number>
 
@@ -303,6 +308,32 @@ gcc fib.c algorithms.c matrix.c utils.c -o fib -I/opt/homebrew/include -L/opt/ho
 ./fib <number> -a matrix -f hex -t -r -v -o result.txt
 ```
 
+### Terminal User Interface (TUI)
+
+Run without arguments to launch the interactive TUI:
+
+```sh
+./fib
+```
+
+TUI Features:
+
+- **Navigation**: Use UP/DOWN arrows, TAB, or k/j keys to navigate fields
+- **Edit values**: Press ENTER to edit the selected field
+- **Toggle options**: Press SPACE to toggle boolean fields or cycle through options
+- **Calculate**: Press F to start the calculation
+- **View History**: Press H to view calculation history
+- **Quit**: Press Q or ESC to exit
+
+In History View:
+
+- **Navigate**: Use UP/DOWN arrows or k/j keys
+- **Delete entry**: Press D to delete the selected history entry
+- **Back to Main**: Press H or ESC to return to the main view
+- **Quit**: Press Q to exit
+
+The calculation history is automatically saved to `~/.fib_history` and stores up to 100 entries.
+
 ## Examples:
 
 Calculate the 50th Fibonacci number:
@@ -315,6 +346,12 @@ Calculate using matrix exponentiation and show time taken:
 
 ```sh
 ./fib 100 -a matrix -t
+```
+
+View calculation history:
+
+```sh
+./fib -y
 ```
 
 Stress test: Calculate large Fibonacci numbers showing only execution time:
