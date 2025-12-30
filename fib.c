@@ -357,6 +357,10 @@ int main(int argc, char *argv[]) {
   }
 
   // Step 8: Execute the selected Fibonacci calculation algorithm
+  if (verbose) {
+    fprintf(stderr, "Calculating Fibonacci number...\n");
+  }
+
   switch (algo) {
     case ITERATIVE:
       calculate_fibonacci_iterative(result, limit, verbose);
