@@ -55,7 +55,11 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 ifeq ($(UNAME_S),Linux)
-	LDFLAGS =
+	# Check if pkg-config is available for ncurses
+	NCURSES_CFLAGS := $(shell pkg-config --cflags ncurses 2>/dev/null || echo "")
+	NCURSES_LIBS := $(shell pkg-config --libs ncurses 2>/dev/null || echo "-lncurses")
+	CFLAGS += $(NCURSES_CFLAGS)
+	LDFLAGS = $(NCURSES_LIBS)
 	INSTALL_STRIP = -s
 endif
 
@@ -365,8 +369,8 @@ ifeq ($(UNAME_S),Darwin)
 		echo ""; \
 		exit 1; \
 	fi
-	@echo "Installing GMP library..."
-	@brew install gmp
+	@echo "Installing GMP and ncurses libraries..."
+	@brew install gmp ncurses
 	@echo ""
 	@echo "✓ Build dependencies installed"
 else ifeq ($(UNAME_S),Linux)
@@ -374,23 +378,23 @@ else ifeq ($(UNAME_S),Linux)
 	@if command -v apt-get >/dev/null 2>&1; then \
 		echo "Installing dependencies..."; \
 		sudo apt-get update && \
-		sudo apt-get install -y libgmp-dev build-essential; \
+		sudo apt-get install -y libgmp-dev libncurses-dev build-essential; \
 		echo ""; \
 		echo "✓ Build dependencies installed"; \
 	elif command -v dnf >/dev/null 2>&1; then \
 		echo "Installing dependencies..."; \
-		sudo dnf install -y gmp-devel gcc make; \
+		sudo dnf install -y gmp-devel ncurses-devel gcc make; \
 		echo ""; \
 		echo "✓ Build dependencies installed"; \
 	elif command -v pacman >/dev/null 2>&1; then \
 		echo "Installing dependencies..."; \
-		sudo pacman -S --noconfirm gmp base-devel; \
+		sudo pacman -S --noconfirm gmp ncurses base-devel; \
 		echo ""; \
 		echo "✓ Build dependencies installed"; \
 	else \
 		echo ""; \
 		echo "ERROR: Could not detect a compatible package manager"; \
-		echo "Please install GMP library and build tools manually."; \
+		echo "Please install GMP and ncurses libraries and build tools manually."; \
 		echo ""; \
 		exit 1; \
 	fi
@@ -525,7 +529,7 @@ help:
 	@echo "Installation:"
 	@echo "  install            - Install binary to $(BINDIR)"
 	@echo "  uninstall          - Remove installed binary"
-	@echo "  install-deps       - Install build dependencies (GMP, compiler)"
+	@echo "  install-deps       - Install build dependencies (GMP, ncurses, compiler)"
 	@echo "  install-debug-deps - Install all dependencies including dev tools"
 	@echo "  check-deps         - Check if dependencies are installed"
 	@echo ""

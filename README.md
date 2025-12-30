@@ -12,6 +12,7 @@ fib calculates Fibonacci numbers up to a specified limit using arbitrary-precisi
 
 - C compiler supporting C99 or higher
 - GMP library (GNU Multiple Precision Arithmetic)
+- ncurses library (for Terminal User Interface)
 - Make (for easier compilation)
 
 ## Installation of Dependencies:
@@ -21,7 +22,7 @@ fib calculates Fibonacci numbers up to a specified limit using arbitrary-precisi
 fib includes a Makefile to install required dependencies:
 
 ```sh
-# Install only build dependencies (GMP library, compiler tools)
+# Install only build dependencies (GMP, ncurses libraries, compiler tools)
 make install-deps
 
 # Install all dependencies including development tools
@@ -40,10 +41,16 @@ Install dependencies manually by executing:
 
 ```sh
 # On Debian/Ubuntu based systems
-apt install libgmp-dev
+sudo apt install libgmp-dev libncurses-dev
+
+# On Fedora/RHEL based systems
+sudo dnf install gmp-devel ncurses-devel
+
+# On Arch Linux
+sudo pacman -S gmp ncurses
 
 # On macOS with Homebrew
-brew install gmp
+brew install gmp ncurses
 ```
 
 ## Building from source:

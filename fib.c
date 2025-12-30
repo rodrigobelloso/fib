@@ -4,7 +4,9 @@
 
 #define _POSIX_C_SOURCE 200809L
 #define _BSD_SOURCE
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
 
 #include "fib.h"
 #include <errno.h>

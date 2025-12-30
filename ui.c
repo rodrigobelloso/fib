@@ -1,5 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
 #define _BSD_SOURCE
 
 #include "fib.h"
@@ -8,6 +10,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <time.h>
 #include <ncurses.h>
 
 #define MAX_INPUT_SIZE 256
@@ -32,6 +35,9 @@ typedef struct {
   int verbose;
   char output_file[MAX_INPUT_SIZE];
   int has_output_file;
+  char *result_string;
+  int has_result;
+  double calc_time;
 } UIConfig;
 
 typedef enum {
@@ -74,7 +80,7 @@ static void draw_header(WINDOW *win) {
 static void draw_footer(WINDOW *win, int max_y) {
   wattron(win, A_DIM);
   mvwprintw(win, max_y - 2, 2,
-            "Navigation: UP/DOWN or TAB | Edit: ENTER | Toggle: SPACE | Confirm: F");
+            "Navigation: UP/DOWN or TAB | Edit: ENTER | Toggle: SPACE | Calculate: F");
   mvwprintw(win, max_y - 1, 2, "Quit: Q or ESC");
   wattroff(win, A_DIM);
 }
@@ -138,7 +144,50 @@ static void draw_ui(WINDOW *win, UIConfig *config, int selected_field) {
 
   draw_header(win);
 
-  int y = 4;
+  // Draw result if available
+  if (config->has_result) {
+    int result_y = 3;
+    wattron(win, A_BOLD);
+    mvwprintw(win, result_y, 4, "Result:");
+    wattroff(win, A_BOLD);
+
+    // Display calculation time if requested
+    if (config->show_time) {
+      mvwprintw(win, result_y, 12, "(%.6f seconds)", config->calc_time);
+    }
+
+    // Display the result (may wrap for large numbers)
+    if (!config->time_only && config->result_string) {
+      int result_display_y = result_y + 1;
+      int max_result_width = max_x - 8;
+
+      // Word wrap the result for very large numbers
+      const char *ptr = config->result_string;
+      int line = 0;
+      while (*ptr && line < 5) {
+        int chars_to_print = max_result_width;
+        int remaining = strlen(ptr);
+        if (remaining < chars_to_print) {
+          chars_to_print = remaining;
+        }
+
+        mvwprintw(win, result_display_y + line, 6, "%.*s", chars_to_print, ptr);
+        ptr += chars_to_print;
+        line++;
+      }
+
+      if (*ptr) {
+        mvwprintw(win, result_display_y + line, 6, "... (truncated)");
+      }
+    }
+
+    // Separator line
+    wattron(win, A_DIM);
+    mvwhline(win, result_y + 8, 2, ACS_HLINE, max_x - 4);
+    wattroff(win, A_DIM);
+  }
+
+  int y = config->has_result ? 13 : 4;
   char number_str[MAX_NUMBER_LEN];
   snprintf(number_str, MAX_NUMBER_LEN, "%ld", config->fib_number);
   draw_field(win, y++, 4, "Fibonacci Number", number_str, selected_field == FIELD_NUMBER, 15);
@@ -173,11 +222,11 @@ static void draw_ui(WINDOW *win, UIConfig *config, int selected_field) {
 
   if (selected_field == FIELD_CONFIRM) {
     wattron(win, A_BOLD | A_REVERSE);
-    mvwprintw(win, y, max_x / 2 - 8, "  [ GENERATE ]  ");
+    mvwprintw(win, y, max_x / 2 - 8, "  [ CALCULATE ]  ");
     wattroff(win, A_BOLD | A_REVERSE);
   } else {
     wattron(win, A_BOLD);
-    mvwprintw(win, y, max_x / 2 - 8, "  [ GENERATE ]  ");
+    mvwprintw(win, y, max_x / 2 - 8, "  [ CALCULATE ]  ");
     wattroff(win, A_BOLD);
   }
 
@@ -299,8 +348,12 @@ static int edit_string(WINDOW *win, char *buffer, int max_len, const char *promp
   }
 
   if (temp[0] != '\0') {
-    strncpy(buffer, temp, max_len - 1);
-    buffer[max_len - 1] = '\0';
+    size_t copy_len = strlen(temp);
+    if (copy_len >= (size_t) max_len) {
+      copy_len = (size_t) (max_len - 1);
+    }
+    memcpy(buffer, temp, copy_len);
+    buffer[copy_len] = '\0';
     return 1;
   }
 
@@ -327,6 +380,55 @@ static void cycle_format(char *format) {
   }
 }
 
+static void calculate_result(UIConfig *config) {
+  // Free previous result if exists
+  if (config->result_string) {
+    free(config->result_string);
+    config->result_string = NULL;
+  }
+
+  mpz_t result;
+  mpz_init(result);
+
+  // Time the calculation
+  struct timespec start, end;
+  clock_gettime(CLOCK_MONOTONIC, &start);
+
+  // Select algorithm
+  if (strcmp(config->algorithm, "iter") == 0) {
+    calculate_fibonacci_iterative(result, config->fib_number, config->verbose);
+  } else if (strcmp(config->algorithm, "recur") == 0) {
+    calculate_fibonacci_recursive(result, config->fib_number, NULL, config->verbose);
+  } else if (strcmp(config->algorithm, "matrix") == 0) {
+    calculate_fibonacci_matrix(result, config->fib_number, config->verbose);
+  }
+
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  config->calc_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+
+  // Format the result
+  OutputFormat fmt = DECIMAL;
+  if (strcmp(config->format, "hex") == 0) {
+    fmt = HEXADECIMAL;
+  } else if (strcmp(config->format, "bin") == 0) {
+    fmt = BINARY;
+  }
+
+  config->result_string = get_formatted_result(result, fmt, config->verbose);
+  config->has_result = 1;
+
+  // Write to file if requested
+  if (config->has_output_file && config->output_file[0] != '\0') {
+    FILE *fp = fopen(config->output_file, "w");
+    if (fp) {
+      fprintf(fp, "%s\n", config->result_string);
+      fclose(fp);
+    }
+  }
+
+  mpz_clear(result);
+}
+
 /**
  * Runs the interactive Terminal User Interface (TUI) for the Fibonacci calculator.
  *
@@ -345,7 +447,10 @@ void run_user_interface(int *argc, char ***argv) {
                      .time_only = 0,
                      .raw_output = 0,
                      .verbose = 0,
-                     .has_output_file = 0};
+                     .has_output_file = 0,
+                     .result_string = NULL,
+                     .has_result = 0,
+                     .calc_time = 0.0};
   strcpy(config.algorithm, "iter");
   strcpy(config.format, "dec");
   config.output_file[0] = '\0';
@@ -406,6 +511,9 @@ void run_user_interface(int *argc, char ***argv) {
       case 'q':
       case 'Q':
       case 27:  // ESC
+        if (config.result_string) {
+          free(config.result_string);
+        }
         delwin(main_win);
         endwin();
         exit(0);
@@ -486,14 +594,14 @@ void run_user_interface(int *argc, char ***argv) {
             }
             break;
           case FIELD_CONFIRM:
-            running = 0;
+            calculate_result(&config);
             break;
         }
         break;
 
       case 'f':
       case 'F':
-        running = 0;
+        calculate_result(&config);
         break;
     }
   }
