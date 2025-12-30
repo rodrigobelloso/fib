@@ -260,7 +260,7 @@ static int edit_number(WINDOW *win, long *value, long min_val, long max_val) {
   buffer[0] = '\0';
 
   while ((ch = wgetch(input_win)) != '\n' && ch != 27) {
-    if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) {
+    if (ch == KEY_BACKSPACE || ch == 127 || ch == 8 || ch == KEY_DC) {
       if (pos > 0) {
         pos--;
         buffer[pos] = '\0';
@@ -321,7 +321,7 @@ static int edit_string(WINDOW *win, char *buffer, int max_len, const char *promp
   int ch, pos = 0;
 
   while ((ch = wgetch(input_win)) != '\n' && ch != 27) {
-    if (ch == KEY_BACKSPACE || ch == 127 || ch == 8) {
+    if (ch == KEY_BACKSPACE || ch == 127 || ch == 8 || ch == KEY_DC) {
       if (pos > 0) {
         pos--;
         temp[pos] = '\0';
@@ -570,8 +570,8 @@ void run_user_interface(int *argc, char ***argv) {
         }
         break;
 
-      case '\n':
-      case KEY_ENTER:
+      case '\n':  // Line feed (Enter key - ASCII 10)
+      case 13:    // Carriage return
         switch (selected_field) {
           case FIELD_NUMBER:
             edit_number(main_win, &config.fib_number, 0, 1000000);
