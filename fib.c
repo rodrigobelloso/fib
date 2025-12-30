@@ -89,6 +89,47 @@ static int is_safe_output_directory(const char *resolved_path) {
 }
 
 /**
+ * Sanitizes filename to remove dangerous characters.
+ * Creates a clean filename that can only contain safe characters.
+ *
+ * @param filename The filename component to sanitize
+ * @return A newly allocated sanitized filename, or NULL on error
+ */
+static char *sanitize_filename(const char *filename) {
+  if (filename == NULL || filename[0] == '\0') {
+    return NULL;
+  }
+
+  size_t len = strlen(filename);
+  if (len >= PATH_MAX) {
+    return NULL;
+  }
+
+  char *sanitized = malloc(len + 1);
+  if (sanitized == NULL) {
+    return NULL;
+  }
+
+  size_t j = 0;
+  for (size_t i = 0; i < len; i++) {
+    char c = filename[i];
+    // Allow only alphanumeric, underscore, hyphen, and dot
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || 
+        (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.') {
+      sanitized[j++] = c;
+    }
+  }
+  sanitized[j] = '\0';
+
+  if (j == 0 || strcmp(sanitized, ".") == 0 || strcmp(sanitized, "..") == 0) {
+    free(sanitized);
+    return NULL;
+  }
+
+  return sanitized;
+}
+
+/**
  * Validates and sanitizes a file path to prevent security vulnerabilities.
  *
  * This function protects against:
@@ -132,54 +173,82 @@ static char *validate_output_path(const char *path) {
     return NULL;
   }
 
-  // Resolve to canonical path
-  char *resolved_path = realpath(path, NULL);
+  // Extract directory and filename components
+  char *path_copy = strdup(path);
+  if (path_copy == NULL) {
+    perror("Error allocating memory");
+    return NULL;
+  }
 
-  if (resolved_path == NULL) {
-    char *path_copy = strdup(path);
-    if (path_copy == NULL) {
-      perror("Error allocating memory");
+  char *last_slash = strrchr(path_copy, '/');
+  char *dir_part = NULL;
+  char *file_part = NULL;
+  char *resolved_path = NULL;
+
+  if (last_slash != NULL) {
+    *last_slash = '\0';
+    dir_part = path_copy;
+    file_part = last_slash + 1;
+  } else {
+    file_part = path_copy;
+  }
+
+  // Sanitize the filename component to remove any tainted data
+  char *sanitized_filename = sanitize_filename(file_part);
+  if (sanitized_filename == NULL) {
+    fprintf(stderr, "Error: Invalid filename in path\n");
+    free(path_copy);
+    return NULL;
+  }
+
+  // Resolve directory to canonical path
+  char *resolved_dir = NULL;
+  if (dir_part != NULL && dir_part[0] != '\0') {
+    resolved_dir = realpath(dir_part, NULL);
+    if (resolved_dir == NULL) {
+      fprintf(stderr, "Error: Directory does not exist: %s\n", dir_part);
+      free(sanitized_filename);
+      free(path_copy);
       return NULL;
     }
-
-    char *last_slash = strrchr(path_copy, '/');
-    if (last_slash != NULL) {
-      *last_slash = '\0';
-      char *dir_path = realpath(path_copy, NULL);
-      if (dir_path != NULL) {
-        // Reconstruct the full path
-        size_t len = strlen(dir_path) + strlen(last_slash + 1) + 2;
-        resolved_path = malloc(len);
-        if (resolved_path != NULL) {
-          snprintf(resolved_path, len, "%s/%s", dir_path, last_slash + 1);
-        }
-        free(dir_path);
-      }
-    } else {
-      char cwd[PATH_MAX];
-      if (getcwd(cwd, sizeof(cwd)) != NULL) {
-        size_t len = strlen(cwd) + strlen(path_copy) + 2;
-        resolved_path = malloc(len);
-        if (resolved_path != NULL) {
-          snprintf(resolved_path, len, "%s/%s", cwd, path_copy);
-        }
-      }
+  } else {
+    // Use current working directory
+    resolved_dir = realpath(".", NULL);
+    if (resolved_dir == NULL) {
+      perror("Error getting current directory");
+      free(sanitized_filename);
+      free(path_copy);
+      return NULL;
     }
+  }
+
+  // Verify the resolved directory is in a safe location
+  if (!is_safe_output_directory(resolved_dir)) {
+    free(resolved_dir);
+    free(sanitized_filename);
     free(path_copy);
+    return NULL;
   }
 
+  // Construct the final sanitized path from the canonical directory and sanitized filename
+  // This breaks the taint chain by creating a new string from validated components
+  size_t final_len = strlen(resolved_dir) + strlen(sanitized_filename) + 2;
+  resolved_path = malloc(final_len);
   if (resolved_path == NULL) {
-    perror("Error resolving file path");
+    perror("Error allocating memory");
+    free(resolved_dir);
+    free(sanitized_filename);
+    free(path_copy);
     return NULL;
   }
 
-  // Verify the resolved path is in a safe directory
-  if (!is_safe_output_directory(resolved_path)) {
-    free(resolved_path);
-    return NULL;
-  }
+  snprintf(resolved_path, final_len, "%s/%s", resolved_dir, sanitized_filename);
 
-  // Final check: ensure no path traversal in the resolved path
+  free(resolved_dir);
+  free(sanitized_filename);
+  free(path_copy);
+
+  // Final validation of the constructed path
   if (strstr(resolved_path, "..") != NULL) {
     fprintf(stderr, "Error: Path traversal in resolved path\n");
     free(resolved_path);
@@ -475,52 +544,16 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Opening output file: %s\n", output_file);
     }
 
-    // SECURITY: output_file has been validated by validate_output_path()
-    // which performs the following checks:
-    // - Rejects empty paths
-    // - Rejects paths containing ".." (path traversal)
-    // - Rejects paths with null bytes
-    // - Resolves to canonical path using realpath()
-    // - Blocks writes to system directories (/etc, /sys, /proc, /dev)
-    // This sanitization mitigates tainted path vulnerabilities (CWE-73)
-    // The output_file path has been fully validated by validate_output_path()
-    // which includes: path traversal checks, canonicalization, and directory whitelist
-
-    // Re-validate: The path must be canonical and safe
-    // This explicit check helps static analyzers understand the sanitization
-    if (output_file == NULL || output_file[0] == '\0') {
-      fprintf(stderr, "Error: Invalid output path\n");
-      mpz_clear(result);
-      cleanup_resources(output_file, free_args, argc, argv);
-      return EXIT_FAILURE;
-    }
-
-    // Verify no path traversal sequences remain
-    if (strstr(output_file, "..") != NULL || strstr(output_file, "//") != NULL) {
-      fprintf(stderr, "Error: Invalid output path\n");
-      mpz_clear(result);
-      cleanup_resources(output_file, free_args, argc, argv);
-      return EXIT_FAILURE;
-    }
-
-    // Verify the path is still in a safe directory
-    if (!is_safe_output_directory(output_file)) {
-      fprintf(stderr, "Error: Output path not in allowed directory\n");
-      mpz_clear(result);
-      cleanup_resources(output_file, free_args, argc, argv);
-      return EXIT_FAILURE;
-    }
-
-    // At this point, output_file has been:
-    // 1. Validated by validate_output_path() for path traversal and injection attacks
-    // 2. Canonicalized to absolute path by realpath()
-    // 3. Checked against whitelist of safe directories
-    // 4. Re-validated above to ensure no tampering
-    // Therefore, it is safe to use in open()
-
+    // SECURITY: output_file has been fully sanitized by validate_output_path()
+    // The function breaks the taint chain by:
+    // 1. Sanitizing the filename to contain only safe characters (alphanumeric, -, _, .)
+    // 2. Resolving directory to canonical path via realpath()
+    // 3. Verifying the directory is in a safe location whitelist
+    // 4. Constructing a new path string from validated components
+    // This eliminates path traversal (CWE-22) and tainted path (CWE-73) vulnerabilities
+    
     // Use open() with O_CREAT | O_NOFOLLOW to safely create the file
     // O_NOFOLLOW prevents following symlinks, mitigating TOCTOU attacks
-    // codeql[cpp/path-injection] Validated by validate_output_path and is_safe_output_directory
     int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
     if (fd == -1) {
       perror("Error opening output file");
