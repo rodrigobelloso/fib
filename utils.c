@@ -24,9 +24,9 @@ void display_help(const char *program_name) {
   printf("                  bin   - Binary\n");
   printf("  -a, --algorithm <method>\n");
   printf("                Set calculation algorithm. Available options:\n");
-  printf("                  iter   - Iterative (default, most efficient)\n");
+  printf("                  iter   - Iterative\n");
   printf("                  recur  - Recursive with memoization\n");
-  printf("                  matrix - Matrix exponentiation\n");
+  printf("                  matrix - Matrix exponentiation (default)\n");
   printf("\n");
   printf("Examples:\n");
   printf("  %s 100                 Calculate using default algorithm\n", program_name);

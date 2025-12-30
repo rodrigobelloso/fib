@@ -360,12 +360,12 @@ static int edit_string(WINDOW *win, char *buffer, int max_len, const char *promp
 }
 
 static void cycle_algorithm(char *algorithm) {
-  if (strcmp(algorithm, "iter") == 0) {
-    strcpy(algorithm, "recur");
-  } else if (strcmp(algorithm, "recur") == 0) {
-    strcpy(algorithm, "matrix");
-  } else {
+  if (strcmp(algorithm, "matrix") == 0) {
     strcpy(algorithm, "iter");
+  } else if (strcmp(algorithm, "iter") == 0) {
+    strcpy(algorithm, "recur");
+  } else {
+    strcpy(algorithm, "matrix");
   }
 }
 
@@ -648,7 +648,7 @@ void run_user_interface(int *argc, char ***argv) {
 
   // Build command-line arguments from config
   int new_argc = 2;  // program name + number
-  if (strcmp(config.algorithm, "iter") != 0)
+  if (strcmp(config.algorithm, "matrix") != 0)
     new_argc += 2;
   if (strcmp(config.format, "dec") != 0)
     new_argc += 2;
@@ -675,7 +675,7 @@ void run_user_interface(int *argc, char ***argv) {
 
   int arg_index = 2;
 
-  if (strcmp(config.algorithm, "iter") != 0) {
+  if (strcmp(config.algorithm, "matrix") != 0) {
     new_argv[arg_index++] = my_strdup("-a");
     new_argv[arg_index++] = my_strdup(config.algorithm);
   }

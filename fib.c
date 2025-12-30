@@ -142,7 +142,7 @@ static void cleanup_resources(char *output_file, int free_args, int argc, char *
  *   -r, --raw               Show only the raw number without labels
  *   -v, --verbose           Show detailed calculation information
  *   -f, --format <fmt>      Output format: dec, hex, or bin (default: dec)
- *   -a, --algorithm <algo>  Algorithm: iter, recur, or matrix (default: iter)
+ *   -a, --algorithm <algo>  Algorithm: iter, recur, or matrix (default: matrix)
  *   -o, --output <file>     Write output to file instead of stdout
  *
  * If no arguments are provided, launches an interactive user interface.
@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
   int verbose = 0;
   long limit = -1;
   char *output_file = NULL;
-  Algorithm algo = ITERATIVE;
+  Algorithm algo = MATRIX;
   OutputFormat format = DECIMAL;
 
   // Step 3: Parse command-line arguments
