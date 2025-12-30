@@ -483,7 +483,7 @@ static void calculate_result(UIConfig *config) {
  * argv Pointer to the argument vector, which will be replaced with newly generated arguments
  */
 void run_user_interface(int *argc, char ***argv) {
-  UIConfig config = {.fib_number = 10,
+  UIConfig config = {.fib_number = '\0',
                      .show_time = 0,
                      .time_only = 0,
                      .raw_output = 0,
@@ -491,7 +491,7 @@ void run_user_interface(int *argc, char ***argv) {
                      .result_string = NULL,
                      .has_result = 0,
                      .calc_time = 0.0};
-  strcpy(config.algorithm, "iter");
+  strcpy(config.algorithm, "matrix");
   strcpy(config.format, "dec");
   config.output_file[0] = '\0';
 
