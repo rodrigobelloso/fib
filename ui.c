@@ -11,6 +11,9 @@
 #include <ctype.h>
 #include <errno.h>
 #include <time.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <ncurses.h>
 
 #define MAX_INPUT_SIZE 256
@@ -419,10 +422,17 @@ static void calculate_result(UIConfig *config) {
 
   // Write to file if requested
   if (config->has_output_file && config->output_file[0] != '\0') {
-    FILE *fp = fopen(config->output_file, "w");
-    if (fp) {
-      fprintf(fp, "%s\n", config->result_string);
-      fclose(fp);
+    // Create file with restrictive permissions (0600 = rw-------)
+    // This prevents world-writable files and potential security vulnerabilities
+    int fd = open(config->output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    if (fd != -1) {
+      FILE *fp = fdopen(fd, "w");
+      if (fp) {
+        fprintf(fp, "%s\n", config->result_string);
+        fclose(fp);  // This also closes the underlying fd
+      } else {
+        close(fd);
+      }
     }
   }
 
