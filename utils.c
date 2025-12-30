@@ -275,7 +275,7 @@ int add_to_history(long fib_number, Algorithm algorithm, OutputFormat format, do
 
   // Keep only MAX_HISTORY_ENTRIES
   int new_count = count + 1;
-  if (new_count > MAX_HISTORY_ENTRIES) {
+  if (new_count >= MAX_HISTORY_ENTRIES) {
     new_count = MAX_HISTORY_ENTRIES;
   }
 
