@@ -35,7 +35,6 @@ typedef struct {
   int show_time;
   int time_only;
   int raw_output;
-  int verbose;
   char output_file[MAX_INPUT_SIZE];
   int has_output_file;
   char *result_string;
@@ -50,7 +49,6 @@ typedef enum {
   FIELD_SHOW_TIME,
   FIELD_TIME_ONLY,
   FIELD_RAW_OUTPUT,
-  FIELD_VERBOSE,
   FIELD_OUTPUT_FILE,
   FIELD_CONFIRM,
   FIELD_COUNT
@@ -214,8 +212,6 @@ static void draw_ui(WINDOW *win, UIConfig *config, int selected_field) {
   y++;
   draw_toggle_field(win, y++, 4, "Raw Output", config->raw_output,
                     selected_field == FIELD_RAW_OUTPUT);
-
-  draw_toggle_field(win, y++, 4, "Verbose Mode", config->verbose, selected_field == FIELD_VERBOSE);
 
   y++;
   const char *file_display = config->has_output_file ? config->output_file : "(none)";
@@ -399,11 +395,11 @@ static void calculate_result(UIConfig *config) {
 
   // Select algorithm
   if (strcmp(config->algorithm, "iter") == 0) {
-    calculate_fibonacci_iterative(result, config->fib_number, config->verbose);
+    calculate_fibonacci_iterative(result, config->fib_number, 0);
   } else if (strcmp(config->algorithm, "recur") == 0) {
-    calculate_fibonacci_recursive(result, config->fib_number, NULL, config->verbose);
+    calculate_fibonacci_recursive(result, config->fib_number, NULL, 0);
   } else if (strcmp(config->algorithm, "matrix") == 0) {
-    calculate_fibonacci_matrix(result, config->fib_number, config->verbose);
+    calculate_fibonacci_matrix(result, config->fib_number, 0);
   }
 
   clock_gettime(CLOCK_MONOTONIC, &end);
@@ -417,7 +413,42 @@ static void calculate_result(UIConfig *config) {
     fmt = BINARY;
   }
 
-  config->result_string = get_formatted_result(result, fmt, config->verbose);
+  char *raw_result = get_formatted_result(result, fmt, 0);
+
+  // Build the final result string based on raw_output setting
+  if (config->raw_output) {
+    // Raw output: just the number
+    config->result_string = raw_result;
+  } else {
+    // Formatted output: add label and prefix
+    const char *format_name;
+    switch (fmt) {
+      case DECIMAL:
+        format_name = "decimal";
+        break;
+      case HEXADECIMAL:
+        format_name = "hexadecimal";
+        break;
+      case BINARY:
+        format_name = "binary";
+        break;
+      default:
+        format_name = "decimal";
+    }
+
+    const char *prefix = get_format_prefix(fmt);
+    size_t label_len = snprintf(NULL, 0, "Fibonacci Number %ld (%s): %s%s", config->fib_number,
+                                format_name, prefix, raw_result);
+    config->result_string = malloc(label_len + 1);
+    if (config->result_string) {
+      snprintf(config->result_string, label_len + 1, "Fibonacci Number %ld (%s): %s%s",
+               config->fib_number, format_name, prefix, raw_result);
+      free(raw_result);
+    } else {
+      config->result_string = raw_result;  // Fallback if malloc fails
+    }
+  }
+
   config->has_result = 1;
 
   // Write to file if requested
@@ -456,7 +487,6 @@ void run_user_interface(int *argc, char ***argv) {
                      .show_time = 0,
                      .time_only = 0,
                      .raw_output = 0,
-                     .verbose = 0,
                      .has_output_file = 0,
                      .result_string = NULL,
                      .has_result = 0,
@@ -568,9 +598,6 @@ void run_user_interface(int *argc, char ***argv) {
           case FIELD_RAW_OUTPUT:
             config.raw_output = !config.raw_output;
             break;
-          case FIELD_VERBOSE:
-            config.verbose = !config.verbose;
-            break;
           case FIELD_OUTPUT_FILE:
             config.has_output_file = !config.has_output_file;
             if (!config.has_output_file) {
@@ -631,8 +658,6 @@ void run_user_interface(int *argc, char ***argv) {
     new_argc += 1;
   if (config.raw_output)
     new_argc += 1;
-  if (config.verbose)
-    new_argc += 1;
   if (config.has_output_file && config.output_file[0] != '\0')
     new_argc += 2;
 
@@ -670,10 +695,6 @@ void run_user_interface(int *argc, char ***argv) {
 
   if (config.raw_output) {
     new_argv[arg_index++] = my_strdup("-r");
-  }
-
-  if (config.verbose) {
-    new_argv[arg_index++] = my_strdup("-v");
   }
 
   if (config.has_output_file && config.output_file[0] != '\0') {
