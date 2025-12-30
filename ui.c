@@ -68,7 +68,7 @@ static void draw_header(WINDOW *win) {
   getmaxyx(win, max_y, max_x);
   (void) max_y;  // unused
 
-  const char *title = "FIB.C";
+  const char *title = "FIB";
   int title_len = strlen(title);
   int padding = (max_x - 4 - title_len) / 2;
 

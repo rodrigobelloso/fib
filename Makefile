@@ -1,5 +1,5 @@
 PROJECT_NAME = fib
-VERSION = 0.1.0
+VERSION = 0.2.0
 AUTHOR = Rodrigo Belloso
 
 # Compiler and tools
