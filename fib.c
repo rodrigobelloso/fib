@@ -114,8 +114,8 @@ static char *sanitize_filename(const char *filename) {
   for (size_t i = 0; i < len; i++) {
     char c = filename[i];
     // Allow only alphanumeric, underscore, hyphen, and dot
-    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || 
-        (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.') {
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' ||
+        c == '-' || c == '.') {
       sanitized[j++] = c;
     }
   }
@@ -551,7 +551,7 @@ int main(int argc, char *argv[]) {
     // 3. Verifying the directory is in a safe location whitelist
     // 4. Constructing a new path string from validated components
     // This eliminates path traversal (CWE-22) and tainted path (CWE-73) vulnerabilities
-    
+
     // Use open() with O_CREAT | O_NOFOLLOW to safely create the file
     // O_NOFOLLOW prevents following symlinks, mitigating TOCTOU attacks
     int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
