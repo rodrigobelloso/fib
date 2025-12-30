@@ -529,10 +529,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Add to history before freeing result_str
-    if (show_time) {
-      const double time_taken = ((double) (end_time - start_time)) / (double) CLOCKS_PER_SEC;
-      add_to_history(limit, algo, format, time_taken, result_str);
-    }
+    const double time_taken = ((double) (end_time - start_time)) / (double) CLOCKS_PER_SEC;
+    add_to_history(limit, algo, format, time_taken, result_str);
 
     free(result_str);
   }
