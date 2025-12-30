@@ -20,6 +20,18 @@ static char *get_history_file_path(void) {
     return NULL;
   }
 
+  // Validate that home path doesn't contain dangerous characters
+  // and is an absolute path
+  if (home[0] != '/' || strstr(home, "..") != NULL) {
+    return NULL;
+  }
+
+  // Check that home directory exists and is a directory
+  struct stat st;
+  if (stat(home, &st) != 0 || !S_ISDIR(st.st_mode)) {
+    return NULL;
+  }
+
   size_t len = strlen(home) + strlen("/.fib_history") + 1;
   char *path = malloc(len);
   if (path) {
