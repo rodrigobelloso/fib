@@ -71,8 +71,10 @@ static int is_safe_output_directory(const char *resolved_path) {
   // Allow files in system temporary directories (macOS and other Unix systems)
   // macOS uses /private/var/folders/ for per-user temporary files
   // Check both with and without trailing slash (for directory paths)
-  if (strncmp(resolved_path, "/private/tmp/", 13) == 0 || strcmp(resolved_path, "/private/tmp") == 0 ||
-      strncmp(resolved_path, "/private/var/tmp/", 17) == 0 || strcmp(resolved_path, "/private/var/tmp") == 0 ||
+  if (strncmp(resolved_path, "/private/tmp/", 13) == 0 ||
+      strcmp(resolved_path, "/private/tmp") == 0 ||
+      strncmp(resolved_path, "/private/var/tmp/", 17) == 0 ||
+      strcmp(resolved_path, "/private/var/tmp") == 0 ||
       strncmp(resolved_path, "/private/var/folders/", 21) == 0 ||
       strncmp(resolved_path, "/var/folders/", 13) == 0) {
     return 1;
