@@ -25,6 +25,70 @@
 #endif
 
 /**
+ * Checks if a resolved path is within safe directories.
+ * Prevents writing to system directories and ensures the path is in an allowed location.
+ *
+ * @param resolved_path The canonicalized absolute path to check
+ * @return 1 if the path is safe, 0 otherwise
+ */
+static int is_safe_output_directory(const char *resolved_path) {
+  if (resolved_path == NULL || resolved_path[0] == '\0') {
+    return 0;
+  }
+
+  // Block writes to sensitive system directories
+  const char *forbidden_prefixes[] = {"/etc/",  "/sys/",   "/proc/", "/dev/",     "/boot/",
+                                      "/root/", "/bin/",   "/sbin/", "/usr/bin/", "/usr/sbin/",
+                                      "/lib/",  "/lib64/", NULL};
+
+  for (int i = 0; forbidden_prefixes[i] != NULL; i++) {
+    if (strncmp(resolved_path, forbidden_prefixes[i], strlen(forbidden_prefixes[i])) == 0) {
+      fprintf(stderr, "Error: Cannot write to system directory '%s'\n", resolved_path);
+      return 0;
+    }
+  }
+
+  // Allow only specific safe directories or current working directory and subdirectories
+  char cwd[PATH_MAX];
+  if (getcwd(cwd, sizeof(cwd)) == NULL) {
+    perror("Error getting current directory");
+    return 0;
+  }
+
+  size_t cwd_len = strlen(cwd);
+  // Allow files in current directory or subdirectories
+  if (strncmp(resolved_path, cwd, cwd_len) == 0) {
+    return 1;
+  }
+
+  // Allow files in /tmp/ and /var/tmp/ (common for temporary output)
+  if (strncmp(resolved_path, "/tmp/", 5) == 0 || strncmp(resolved_path, "/var/tmp/", 9) == 0) {
+    return 1;
+  }
+
+  // Allow files in system temporary directories (macOS and other Unix systems)
+  // macOS uses /private/var/folders/ for per-user temporary files
+  if (strncmp(resolved_path, "/private/tmp/", 13) == 0 ||
+      strncmp(resolved_path, "/private/var/tmp/", 17) == 0 ||
+      strncmp(resolved_path, "/private/var/folders/", 21) == 0 ||
+      strncmp(resolved_path, "/var/folders/", 13) == 0) {
+    return 1;
+  }
+
+  // Allow files in user's home directory
+  const char *home = getenv("HOME");
+  if (home != NULL) {
+    size_t home_len = strlen(home);
+    if (strncmp(resolved_path, home, home_len) == 0) {
+      return 1;
+    }
+  }
+
+  fprintf(stderr, "Error: Output path must be in current directory, home directory, or /tmp\n");
+  return 0;
+}
+
+/**
  * Validates and sanitizes a file path to prevent security vulnerabilities.
  *
  * This function protects against:
@@ -50,8 +114,8 @@ static char *validate_output_path(const char *path) {
     return NULL;
   }
 
-  // Reject path traversal attempts
-  if (strstr(path, "..") != NULL) {
+  // Reject path traversal attempts - check multiple forms
+  if (strstr(path, "..") != NULL || strstr(path, "//") != NULL) {
     fprintf(stderr, "Error: Path traversal detected in '%s'\n", path);
     return NULL;
   }
@@ -59,6 +123,12 @@ static char *validate_output_path(const char *path) {
   // Check for null byte injection
   if (strlen(path) != strcspn(path, "\0")) {
     fprintf(stderr, "Error: Null byte in path\n");
+    return NULL;
+  }
+
+  // Reject paths with suspicious characters
+  if (strchr(path, '\n') != NULL || strchr(path, '\r') != NULL) {
+    fprintf(stderr, "Error: Invalid characters in path\n");
     return NULL;
   }
 
@@ -103,10 +173,15 @@ static char *validate_output_path(const char *path) {
     return NULL;
   }
 
-  // Block writes to sensitive system directories
-  if (strncmp(resolved_path, "/etc/", 5) == 0 || strncmp(resolved_path, "/sys/", 5) == 0 ||
-      strncmp(resolved_path, "/proc/", 6) == 0 || strncmp(resolved_path, "/dev/", 5) == 0) {
-    fprintf(stderr, "Error: Cannot write to system directory '%s'\n", resolved_path);
+  // Verify the resolved path is in a safe directory
+  if (!is_safe_output_directory(resolved_path)) {
+    free(resolved_path);
+    return NULL;
+  }
+
+  // Final check: ensure no path traversal in the resolved path
+  if (strstr(resolved_path, "..") != NULL) {
+    fprintf(stderr, "Error: Path traversal in resolved path\n");
     free(resolved_path);
     return NULL;
   }
@@ -408,39 +483,45 @@ int main(int argc, char *argv[]) {
     // - Resolves to canonical path using realpath()
     // - Blocks writes to system directories (/etc, /sys, /proc, /dev)
     // This sanitization mitigates tainted path vulnerabilities (CWE-73)
+    // The output_file path has been fully validated by validate_output_path()
+    // which includes: path traversal checks, canonicalization, and directory whitelist
 
-    // Additional defensive check: ensure path doesn't contain path traversal
-    // This helps CodeQL taint analysis recognize the sanitization
-    if (strstr(output_file, "..") != NULL) {
+    // Re-validate: The path must be canonical and safe
+    // This explicit check helps static analyzers understand the sanitization
+    if (output_file == NULL || output_file[0] == '\0') {
       fprintf(stderr, "Error: Invalid output path\n");
       mpz_clear(result);
       cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
     }
 
-    // Create a copy of the validated path to break taint flow for static analysis
-    // The path has already been validated and sanitized by validate_output_path()
-    // lgtm[cpp/path-injection]
-    // codeql[cpp/path-injection]
-    char sanitized_path[PATH_MAX];
-    if (realpath(output_file, sanitized_path) == NULL) {
-      // Handle error or create the file if it doesn't exist
-      if (errno != ENOENT) {
-        perror("Error resolving path");
-        mpz_clear(result);
-        cleanup_resources(output_file, free_args, argc, argv);
-        return EXIT_FAILURE;
-      }
-      // If the file does not exist, that's fine, we will create it.
-      // Copy the original path if it's safe.
-      strncpy(sanitized_path, output_file, PATH_MAX - 1);
-      sanitized_path[PATH_MAX - 1] = '\0';
+    // Verify no path traversal sequences remain
+    if (strstr(output_file, "..") != NULL || strstr(output_file, "//") != NULL) {
+      fprintf(stderr, "Error: Invalid output path\n");
+      mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
+      return EXIT_FAILURE;
     }
+
+    // Verify the path is still in a safe directory
+    if (!is_safe_output_directory(output_file)) {
+      fprintf(stderr, "Error: Output path not in allowed directory\n");
+      mpz_clear(result);
+      cleanup_resources(output_file, free_args, argc, argv);
+      return EXIT_FAILURE;
+    }
+
+    // At this point, output_file has been:
+    // 1. Validated by validate_output_path() for path traversal and injection attacks
+    // 2. Canonicalized to absolute path by realpath()
+    // 3. Checked against whitelist of safe directories
+    // 4. Re-validated above to ensure no tampering
+    // Therefore, it is safe to use in open()
 
     // Use open() with O_CREAT | O_NOFOLLOW to safely create the file
     // O_NOFOLLOW prevents following symlinks, mitigating TOCTOU attacks
-    // The path in sanitized_path has been validated and is safe to use
-    int fd = open(sanitized_path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
+    // codeql[cpp/path-injection] Validated by validate_output_path and is_safe_output_directory
+    int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
     if (fd == -1) {
       perror("Error opening output file");
       mpz_clear(result);
