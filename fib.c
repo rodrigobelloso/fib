@@ -176,6 +176,12 @@ int main(int argc, char *argv[]) {
       cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_SUCCESS;
     }
+    // Handle history option
+    else if (strcmp(argv[i], "-y") == 0 || strcmp(argv[i], "--history") == 0) {
+      display_history();
+      cleanup_resources(output_file, free_args, argc, argv);
+      return EXIT_SUCCESS;
+    }
     // Handle timing options
     else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
       show_time = 1;
@@ -520,6 +526,12 @@ int main(int argc, char *argv[]) {
       mpz_clear(result);
       cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_FAILURE;
+    }
+
+    // Add to history before freeing result_str
+    if (show_time) {
+      const double time_taken = ((double) (end_time - start_time)) / (double) CLOCKS_PER_SEC;
+      add_to_history(limit, algo, format, time_taken, result_str);
     }
 
     free(result_str);

@@ -54,6 +54,8 @@ typedef enum {
   FIELD_COUNT
 } FieldType;
 
+typedef enum { VIEW_MAIN, VIEW_HISTORY } ViewMode;
+
 static void init_colors(void) {
   if (has_colors()) {
     start_color();
@@ -87,8 +89,102 @@ static void draw_footer(WINDOW *win, int max_y) {
   wattron(win, A_DIM);
   mvwprintw(win, max_y - 2, 2,
             "Navigation: UP/DOWN or TAB | Edit: ENTER | Toggle: SPACE | Calculate: F");
-  mvwprintw(win, max_y - 1, 2, "Quit: Q or ESC");
+  mvwprintw(win, max_y - 1, 2, "Quit: Q or ESC | History: H");
   wattroff(win, A_DIM);
+}
+
+static void draw_history_footer(WINDOW *win, int max_y) {
+  wattron(win, A_DIM);
+  mvwprintw(win, max_y - 2, 2, "Navigation: UP/DOWN | Delete: D");
+  mvwprintw(win, max_y - 1, 2, "Back to Main: H or ESC | Quit: Q");
+  wattroff(win, A_DIM);
+}
+
+static void draw_history_view(WINDOW *win, int selected_index, int scroll_offset) {
+  int max_y, max_x;
+  getmaxyx(win, max_y, max_x);
+
+  wclear(win);
+  box(win, 0, 0);
+
+  draw_header(win);
+
+  wattron(win, A_BOLD);
+  mvwprintw(win, 3, 4, "Calculation History");
+  wattroff(win, A_BOLD);
+
+  HistoryEntry *history = NULL;
+  int count = 0;
+
+  if (load_history(&history, &count) != 0 || count == 0) {
+    mvwprintw(win, 5, 4, "No calculation history available.");
+    draw_history_footer(win, max_y);
+    wrefresh(win);
+    if (history)
+      free(history);
+    return;
+  }
+
+  int y = 5;
+  int max_items = max_y - 9;  // Space for header and footer
+  int end_index = scroll_offset + max_items;
+  if (end_index > count) {
+    end_index = count;
+  }
+
+  for (int i = scroll_offset; i < end_index && y < max_y - 4; i++) {
+    int is_selected = (i == selected_index);
+
+    if (is_selected) {
+      wattron(win, A_REVERSE);
+    }
+
+    // Format timestamp
+    char time_str[32];
+    struct tm *tm_info = localtime(&history[i].timestamp);
+    strftime(time_str, sizeof(time_str), "%m/%d %H:%M", tm_info);
+
+    // Display entry
+    mvwprintw(win, y, 4, "%s | F(%ld) | %s | %s | %.4fs", time_str, history[i].fib_number,
+              algorithm_to_string(history[i].algorithm), format_to_string(history[i].format),
+              history[i].calc_time);
+
+    // Display result preview on next line if selected
+    if (is_selected && history[i].result_preview[0] != '\0') {
+      mvwprintw(win, y + 1, 6, "Result: %s%s", history[i].result_preview,
+                strlen(history[i].result_preview) == 64 ? "..." : "");
+      y++;
+    }
+
+    if (is_selected) {
+      wattroff(win, A_REVERSE);
+    }
+
+    y++;
+  }
+
+  // Show scroll indicators
+  if (scroll_offset > 0) {
+    wattron(win, A_DIM);
+    mvwprintw(win, 4, max_x - 10, "^ More ^");
+    wattroff(win, A_DIM);
+  }
+
+  if (end_index < count) {
+    wattron(win, A_DIM);
+    mvwprintw(win, max_y - 3, max_x - 10, "v More v");
+    wattroff(win, A_DIM);
+  }
+
+  // Show count
+  wattron(win, A_DIM);
+  mvwprintw(win, max_y - 3, 4, "Total: %d entries", count);
+  wattroff(win, A_DIM);
+
+  draw_history_footer(win, max_y);
+  wrefresh(win);
+
+  free(history);
 }
 
 static void draw_field(WINDOW *win, int y, int x, const char *label, const char *value,
@@ -456,6 +552,16 @@ static void calculate_result(UIConfig *config) {
 
   config->has_result = 1;
 
+  // Add to history
+  Algorithm algo = MATRIX;
+  if (strcmp(config->algorithm, "iter") == 0) {
+    algo = ITERATIVE;
+  } else if (strcmp(config->algorithm, "recur") == 0) {
+    algo = RECURSIVE;
+  }
+
+  add_to_history(config->fib_number, algo, fmt, config->calc_time, raw_result);
+
   // Write to file if requested
   if (config->has_output_file && config->output_file[0] != '\0') {
     // Create file with restrictive permissions (0600 = rw-------)
@@ -523,10 +629,17 @@ void run_user_interface(int *argc, char ***argv) {
   keypad(main_win, TRUE);
 
   int selected_field = FIELD_NUMBER;
+  ViewMode current_view = VIEW_MAIN;
+  int history_selected = 0;
+  int history_scroll = 0;
   int running = 1;
 
   while (running) {
-    draw_ui(main_win, &config, selected_field);
+    if (current_view == VIEW_MAIN) {
+      draw_ui(main_win, &config, selected_field);
+    } else {
+      draw_history_view(main_win, history_selected, history_scroll);
+    }
 
     int ch = wgetch(main_win);
 
@@ -555,95 +668,206 @@ void run_user_interface(int *argc, char ***argv) {
     switch (ch) {
       case 'q':
       case 'Q':
-      case 27:  // ESC
-        if (config.result_string) {
-          free(config.result_string);
+        if (current_view == VIEW_HISTORY) {
+          if (config.result_string) {
+            free(config.result_string);
+          }
+          delwin(main_win);
+          endwin();
+          exit(0);
+        } else {
+          if (config.result_string) {
+            free(config.result_string);
+          }
+          delwin(main_win);
+          endwin();
+          exit(0);
         }
-        delwin(main_win);
-        endwin();
-        exit(0);
+        break;
+
+      case 27:  // ESC
+        if (current_view == VIEW_HISTORY) {
+          current_view = VIEW_MAIN;
+          history_selected = 0;
+          history_scroll = 0;
+        } else {
+          if (config.result_string) {
+            free(config.result_string);
+          }
+          delwin(main_win);
+          endwin();
+          exit(0);
+        }
+        break;
+
+      case 'h':
+      case 'H':
+        if (current_view == VIEW_MAIN) {
+          current_view = VIEW_HISTORY;
+          history_selected = 0;
+          history_scroll = 0;
+        } else {
+          current_view = VIEW_MAIN;
+        }
         break;
 
       case KEY_UP:
       case 'k':
-        selected_field = (selected_field - 1 + FIELD_COUNT) % FIELD_COUNT;
-        if (!config.show_time && selected_field == FIELD_TIME_ONLY) {
+        if (current_view == VIEW_HISTORY) {
+          HistoryEntry *history = NULL;
+          int count = 0;
+          if (load_history(&history, &count) == 0 && count > 0) {
+            if (history_selected > 0) {
+              history_selected--;
+              if (history_selected < history_scroll) {
+                history_scroll = history_selected;
+              }
+            }
+            free(history);
+          }
+        } else {
           selected_field = (selected_field - 1 + FIELD_COUNT) % FIELD_COUNT;
+          if (!config.show_time && selected_field == FIELD_TIME_ONLY) {
+            selected_field = (selected_field - 1 + FIELD_COUNT) % FIELD_COUNT;
+          }
         }
         break;
 
       case KEY_DOWN:
       case 'j':
-      case 9:  // TAB
-        selected_field = (selected_field + 1) % FIELD_COUNT;
-        if (!config.show_time && selected_field == FIELD_TIME_ONLY) {
+        if (current_view == VIEW_HISTORY) {
+          HistoryEntry *history = NULL;
+          int count = 0;
+          if (load_history(&history, &count) == 0 && count > 0) {
+            if (history_selected < count - 1) {
+              history_selected++;
+              int max_items = max_y - 11;  // Adjust for UI space
+              if (history_selected >= history_scroll + max_items) {
+                history_scroll = history_selected - max_items + 1;
+              }
+            }
+            free(history);
+          }
+        } else {
           selected_field = (selected_field + 1) % FIELD_COUNT;
+          if (!config.show_time && selected_field == FIELD_TIME_ONLY) {
+            selected_field = (selected_field + 1) % FIELD_COUNT;
+          }
+        }
+        break;
+
+      case 9:  // TAB (only in main view)
+        if (current_view == VIEW_MAIN) {
+          selected_field = (selected_field + 1) % FIELD_COUNT;
+          if (!config.show_time && selected_field == FIELD_TIME_ONLY) {
+            selected_field = (selected_field + 1) % FIELD_COUNT;
+          }
+        }
+        break;
+
+      case 'd':
+      case 'D':
+        if (current_view == VIEW_HISTORY) {
+          HistoryEntry *history = NULL;
+          int count = 0;
+          if (load_history(&history, &count) == 0 && count > 0) {
+            // Remove selected entry
+            HistoryEntry *new_history = malloc((count - 1) * sizeof(HistoryEntry));
+            if (new_history) {
+              int new_idx = 0;
+              for (int i = 0; i < count; i++) {
+                if (i != history_selected) {
+                  new_history[new_idx++] = history[i];
+                }
+              }
+              save_history(new_history, count - 1);
+              free(new_history);
+
+              // Adjust selection
+              if (history_selected >= count - 1) {
+                history_selected = count - 2;
+              }
+              if (history_selected < 0) {
+                history_selected = 0;
+              }
+              if (history_selected < history_scroll) {
+                history_scroll = history_selected;
+              }
+            }
+            free(history);
+          }
         }
         break;
 
       case ' ':  // SPACE - toggle boolean fields or cycle options
-        switch (selected_field) {
-          case FIELD_ALGORITHM:
-            cycle_algorithm(config.algorithm);
-            break;
-          case FIELD_FORMAT:
-            cycle_format(config.format);
-            break;
-          case FIELD_SHOW_TIME:
-            config.show_time = !config.show_time;
-            if (!config.show_time) {
-              config.time_only = 0;
-            }
-            break;
-          case FIELD_TIME_ONLY:
-            if (config.show_time) {
-              config.time_only = !config.time_only;
-            }
-            break;
-          case FIELD_RAW_OUTPUT:
-            config.raw_output = !config.raw_output;
-            break;
-          case FIELD_OUTPUT_FILE:
-            config.has_output_file = !config.has_output_file;
-            if (!config.has_output_file) {
-              config.output_file[0] = '\0';
-            }
-            break;
+        if (current_view == VIEW_MAIN) {
+          switch (selected_field) {
+            case FIELD_ALGORITHM:
+              cycle_algorithm(config.algorithm);
+              break;
+            case FIELD_FORMAT:
+              cycle_format(config.format);
+              break;
+            case FIELD_SHOW_TIME:
+              config.show_time = !config.show_time;
+              if (!config.show_time) {
+                config.time_only = 0;
+              }
+              break;
+            case FIELD_TIME_ONLY:
+              if (config.show_time) {
+                config.time_only = !config.time_only;
+              }
+              break;
+            case FIELD_RAW_OUTPUT:
+              config.raw_output = !config.raw_output;
+              break;
+            case FIELD_OUTPUT_FILE:
+              config.has_output_file = !config.has_output_file;
+              if (!config.has_output_file) {
+                config.output_file[0] = '\0';
+              }
+              break;
+          }
         }
         break;
 
       case '\n':  // Line feed (Enter key - ASCII 10)
       case 13:    // Carriage return
-        switch (selected_field) {
-          case FIELD_NUMBER:
-            edit_number(main_win, &config.fib_number, 0, 1000000);
-            break;
-          case FIELD_ALGORITHM:
-            cycle_algorithm(config.algorithm);
-            break;
-          case FIELD_FORMAT:
-            cycle_format(config.format);
-            break;
-          case FIELD_OUTPUT_FILE:
-            if (config.has_output_file || config.output_file[0] == '\0') {
-              if (edit_string(main_win, config.output_file, MAX_INPUT_SIZE,
-                              "Enter output filename:")) {
-                config.has_output_file = 1;
+        if (current_view == VIEW_MAIN) {
+          switch (selected_field) {
+            case FIELD_NUMBER:
+              edit_number(main_win, &config.fib_number, 0, 1000000);
+              break;
+            case FIELD_ALGORITHM:
+              cycle_algorithm(config.algorithm);
+              break;
+            case FIELD_FORMAT:
+              cycle_format(config.format);
+              break;
+            case FIELD_OUTPUT_FILE:
+              if (config.has_output_file || config.output_file[0] == '\0') {
+                if (edit_string(main_win, config.output_file, MAX_INPUT_SIZE,
+                                "Enter output filename:")) {
+                  config.has_output_file = 1;
+                }
+              } else {
+                config.has_output_file = 0;
+                config.output_file[0] = '\0';
               }
-            } else {
-              config.has_output_file = 0;
-              config.output_file[0] = '\0';
-            }
-            break;
-          case FIELD_CONFIRM:
-            calculate_result(&config);
-            break;
+              break;
+            case FIELD_CONFIRM:
+              calculate_result(&config);
+              break;
+          }
         }
         break;
 
       case 'f':
       case 'F':
-        calculate_result(&config);
+        if (current_view == VIEW_MAIN) {
+          calculate_result(&config);
+        }
         break;
     }
   }
