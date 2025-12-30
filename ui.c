@@ -120,8 +120,7 @@ static void draw_history_view(WINDOW *win, int selected_index, int scroll_offset
     mvwprintw(win, 5, 4, "No calculation history available.");
     draw_history_footer(win, max_y);
     wrefresh(win);
-    if (history)
-      free(history);
+    free(history);
     return;
   }
 
@@ -670,16 +669,12 @@ void run_user_interface(int *argc, char ***argv) {
       case 'q':
       case 'Q':
         if (current_view == VIEW_HISTORY) {
-          if (config.result_string) {
-            free(config.result_string);
-          }
+          free(config.result_string);
           delwin(main_win);
           endwin();
           exit(0);
         } else {
-          if (config.result_string) {
-            free(config.result_string);
-          }
+          free(config.result_string);
           delwin(main_win);
           endwin();
           exit(0);
@@ -692,9 +687,7 @@ void run_user_interface(int *argc, char ***argv) {
           history_selected = 0;
           history_scroll = 0;
         } else {
-          if (config.result_string) {
-            free(config.result_string);
-          }
+          free(config.result_string);
           delwin(main_win);
           endwin();
           exit(0);
