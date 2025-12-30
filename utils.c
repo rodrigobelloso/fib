@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <fcntl.h>
 
 static char *get_history_file_path(void) {
   const char *home = getenv("HOME");
@@ -117,10 +118,16 @@ int save_history(const HistoryEntry *history, int count) {
     return -1;
   }
 
-  FILE *fp = fopen(history_path, "wb");
+  int fd = open(history_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
   free(history_path);
 
+  if (fd == -1) {
+    return -1;
+  }
+
+  FILE *fp = fdopen(fd, "wb");
   if (!fp) {
+    close(fd);
     return -1;
   }
 
