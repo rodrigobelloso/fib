@@ -212,8 +212,9 @@ void display_history(void) {
 
   for (int i = 0; i < count; i++) {
     char time_str[64];
-    struct tm *tm_info = localtime(&history[i].timestamp);
-    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm_info);
+    struct tm tm_info;
+    localtime_r(&history[i].timestamp, &tm_info);
+    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", &tm_info);
 
     printf("Entry %d:\n", i + 1);
     printf("  Date:      %s\n", time_str);
