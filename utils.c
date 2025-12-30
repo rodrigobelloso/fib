@@ -6,6 +6,44 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <fcntl.h>
+#include <limits.h>
+
+// Sanitize and validate a path from untrusted input
+// Returns a newly allocated canonical path or NULL if validation fails
+static char *sanitize_path(const char *untrusted_path) {
+  if (!untrusted_path || untrusted_path[0] == '\0') {
+    return NULL;
+  }
+
+  // Path must be absolute
+  if (untrusted_path[0] != '/') {
+    return NULL;
+  }
+
+  // Reject paths containing ".." to prevent directory traversal
+  if (strstr(untrusted_path, "..") != NULL) {
+    return NULL;
+  }
+
+  // Reject paths with suspicious characters
+  if (strchr(untrusted_path, '\0') != untrusted_path + strlen(untrusted_path)) {
+    return NULL;  // Contains embedded null
+  }
+
+  // Get canonical path to resolve any symlinks and normalize the path
+  char *canonical = realpath(untrusted_path, NULL);
+  if (!canonical) {
+    return NULL;
+  }
+
+  // Verify the canonical path is still absolute
+  if (canonical[0] != '/') {
+    free(canonical);
+    return NULL;
+  }
+
+  return canonical;
+}
 
 static char *get_history_file_path(void) {
   const char *home = getenv("HOME");
@@ -20,23 +58,37 @@ static char *get_history_file_path(void) {
     return NULL;
   }
 
-  // Validate that home path doesn't contain dangerous characters
-  // and is an absolute path
-  if (home[0] != '/' || strstr(home, "..") != NULL) {
+  // Sanitize the home directory path from environment variable
+  char *canonical_home = sanitize_path(home);
+  if (!canonical_home) {
     return NULL;
   }
 
   // Check that home directory exists and is a directory
   struct stat st;
-  if (stat(home, &st) != 0 || !S_ISDIR(st.st_mode)) {
+  if (stat(canonical_home, &st) != 0 || !S_ISDIR(st.st_mode)) {
+    free(canonical_home);
     return NULL;
   }
 
-  size_t len = strlen(home) + strlen("/.fib_history") + 1;
+  size_t len = strlen(canonical_home) + strlen("/.fib_history") + 1;
   char *path = malloc(len);
-  if (path) {
-    snprintf(path, len, "%s/.fib_history", home);
+  if (!path) {
+    free(canonical_home);
+    return NULL;
   }
+
+  snprintf(path, len, "%s/.fib_history", canonical_home);
+
+  // Verify the final path is still within the home directory
+  // by checking that it starts with the canonical home path
+  if (strncmp(path, canonical_home, strlen(canonical_home)) != 0) {
+    free(path);
+    free(canonical_home);
+    return NULL;
+  }
+
+  free(canonical_home);
   return path;
 }
 
@@ -88,6 +140,8 @@ int load_history(HistoryEntry **history, int *count) {
     return -1;
   }
 
+  // Validate count before using it for allocation
+  // This prevents uncontrolled allocation size from untrusted input
   if (*count < 0 || *count > MAX_HISTORY_ENTRIES) {
     fclose(fp);
     *count = 0;
@@ -100,7 +154,8 @@ int load_history(HistoryEntry **history, int *count) {
     return 0;
   }
 
-  *history = malloc(*count * sizeof(HistoryEntry));
+  // Safe to allocate: count is validated to be in range [1, MAX_HISTORY_ENTRIES]
+  *history = malloc((size_t) *count * sizeof(HistoryEntry));
   if (!*history) {
     fclose(fp);
     *count = 0;
