@@ -145,7 +145,16 @@ int add_to_history(long fib_number, Algorithm algorithm, OutputFormat format, do
   HistoryEntry *history = NULL;
   int count = 0;
 
-  load_history(&history, &count);
+  int load_result = load_history(&history, &count);
+  if (load_result < 0) {
+    return -1;
+  }
+
+  // Validate count is within reasonable bounds before allocation
+  if (count < 0 || count >= MAX_HISTORY_ENTRIES) {
+    free(history);
+    return -1;
+  }
 
   // Add new entry at the beginning
   HistoryEntry *new_history = malloc((count + 1) * sizeof(HistoryEntry));
