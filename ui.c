@@ -141,8 +141,9 @@ static void draw_history_view(WINDOW *win, int selected_index, int scroll_offset
 
     // Format timestamp
     char time_str[32];
-    struct tm *tm_info = localtime(&history[i].timestamp);
-    strftime(time_str, sizeof(time_str), "%m/%d %H:%M", tm_info);
+    struct tm tm_info;
+    localtime_r(&history[i].timestamp, &tm_info);
+    strftime(time_str, sizeof(time_str), "%m/%d %H:%M", &tm_info);
 
     // Display entry
     mvwprintw(win, y, 4, "%s | F(%ld) | %s | %s | %.4fs", time_str, history[i].fib_number,
