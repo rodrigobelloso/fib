@@ -44,7 +44,7 @@ BASE_CFLAGS += -Wcast-align -Wstrict-prototypes -Wmissing-prototypes
 OPT_LEVEL ?= -O2
 
 # Default CFLAGS
-CFLAGS = $(BASE_CFLAGS) $(OPT_LEVEL)
+CFLAGS = $(BASE_CFLAGS) $(OPT_LEVEL) -DVERSION=\"$(VERSION)\"
 
 # Platform-specific settings
 ifeq ($(UNAME_S),Darwin)
