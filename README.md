@@ -59,6 +59,22 @@ brew install gmp ncurses
 
 fib uses a comprehensive `Makefile` for building and managing the project. The Makefile automatically detects your platform (macOS/Linux) and adjusts paths for GMP accordingly.
 
+#### Build ID System:
+
+Each build automatically generates a unique 6-character random build ID. This identifier helps track different builds and is displayed when using the `--version` option:
+
+```sh
+./fib --version
+# Output: ./fib version 0.3.0 (build 4a5ueg)
+```
+
+The build ID is:
+
+- Automatically generated during compilation
+- A random 6-character alphanumeric string (lowercase letters and numbers)
+- Unique for each build
+- Not stored in version control (build_id.h is in .gitignore)
+
 #### Basic Build Commands:
 
 ```sh

@@ -326,6 +326,12 @@ int main(int argc, char *argv[]) {
       cleanup_resources(output_file, free_args, argc, argv);
       return EXIT_SUCCESS;
     }
+    // Handle version option
+    else if (strcmp(argv[i], "-V") == 0 || strcmp(argv[i], "--version") == 0) {
+      printf("%s version %s (build %s)\n", argv[0], VERSION, BUILD_ID);
+      cleanup_resources(output_file, free_args, argc, argv);
+      return EXIT_SUCCESS;
+    }
     // Handle history option
     else if (strcmp(argv[i], "-y") == 0 || strcmp(argv[i], "--history") == 0) {
       display_history();
