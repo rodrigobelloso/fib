@@ -70,7 +70,7 @@ static void draw_header(WINDOW *win) {
 
 #ifdef VERSION
   char title[64];
-  snprintf(title, sizeof(title), "FIB %s - %s", VERSION, BUILD_ID);
+  snprintf(title, sizeof(title), "FIB %s (%s)", VERSION, BUILD_ID);
 #else
   const char *title = "FIB";
 #endif
