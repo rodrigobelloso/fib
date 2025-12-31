@@ -318,7 +318,8 @@ int main(int argc, char *argv[]) {
 
   // Step 3: Parse command-line arguments
   // Process each argument to configure program behavior
-  for (int i = 1; i < argc; i++) {
+  int i = 1;
+  while (i < argc) {
     // Handle help option
     if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       display_help(argv[0]);
@@ -334,21 +335,24 @@ int main(int argc, char *argv[]) {
     // Handle timing options
     else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--time") == 0) {
       show_time = 1;
+      i++;
     } else if (strcmp(argv[i], "-T") == 0 || strcmp(argv[i], "--time-only") == 0) {
       time_only = 1;
       show_time = 1;
+      i++;
     }
     // Handle output display options
     else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--raw") == 0) {
       raw_output = 1;
+      i++;
     } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
       verbose = 1;
+      i++;
     }
     // Handle output format option
     else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--format") == 0) {
       if (i + 1 < argc) {
-        i++;
-        char const *format_arg = argv[i];
+        char const *format_arg = argv[i + 1];
         if (strcmp(format_arg, "dec") == 0) {
           format = DECIMAL;
         } else if (strcmp(format_arg, "hex") == 0) {
@@ -361,6 +365,7 @@ int main(int argc, char *argv[]) {
           cleanup_resources(output_file, free_args, argc, argv);
           return EXIT_FAILURE;
         }
+        i += 2;
       } else {
         fprintf(stderr, "Error: Missing format for -f/--format option\n");
         cleanup_resources(output_file, free_args, argc, argv);
@@ -370,8 +375,7 @@ int main(int argc, char *argv[]) {
     // Handle algorithm selection option
     else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--algorithm") == 0) {
       if (i + 1 < argc) {
-        i++;
-        char const *algo_arg = argv[i];
+        char const *algo_arg = argv[i + 1];
         if (strcmp(algo_arg, "iter") == 0) {
           algo = ITERATIVE;
         } else if (strcmp(algo_arg, "recur") == 0) {
@@ -384,6 +388,7 @@ int main(int argc, char *argv[]) {
           cleanup_resources(output_file, free_args, argc, argv);
           return EXIT_FAILURE;
         }
+        i += 2;
       } else {
         fprintf(stderr, "Error: Missing algorithm for -a/--algorithm option\n");
         cleanup_resources(output_file, free_args, argc, argv);
@@ -393,13 +398,13 @@ int main(int argc, char *argv[]) {
     // Handle output file option
     else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
       if (i + 1 < argc) {
-        i++;
-        char *validated_path = validate_output_path(argv[i]);
+        char *validated_path = validate_output_path(argv[i + 1]);
         if (validated_path == NULL) {
           cleanup_resources(output_file, free_args, argc, argv);
           return EXIT_FAILURE;
         }
         output_file = validated_path;
+        i += 2;
       } else {
         fprintf(stderr, "Error: Missing filename for -o/--output option\n");
         cleanup_resources(output_file, free_args, argc, argv);
@@ -429,6 +434,7 @@ int main(int argc, char *argv[]) {
         cleanup_resources(output_file, free_args, argc, argv);
         return EXIT_FAILURE;
       }
+      i++;
     }
     // Handle unexpected extra arguments
     else {
