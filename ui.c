@@ -480,6 +480,125 @@ static void cycle_format(char *format) {
   }
 }
 
+// Forward declarations
+static void calculate_result(UIConfig *config);
+
+static void handle_history_up(int *history_selected, int *history_scroll) {
+  HistoryEntry *history = NULL;
+  int count = 0;
+  if (load_history(&history, &count) == 0 && count > 0) {
+    if (*history_selected > 0) {
+      (*history_selected)--;
+      if (*history_selected < *history_scroll) {
+        *history_scroll = *history_selected;
+      }
+    }
+    free(history);
+  }
+}
+
+static void handle_history_down(int *history_selected, int *history_scroll, int max_y) {
+  HistoryEntry *history = NULL;
+  int count = 0;
+  if (load_history(&history, &count) == 0 && count > 0) {
+    if (*history_selected < count - 1) {
+      (*history_selected)++;
+      int max_items = max_y - 11;
+      if (*history_selected >= *history_scroll + max_items) {
+        *history_scroll = *history_selected - max_items + 1;
+      }
+    }
+    free(history);
+  }
+}
+
+static void handle_history_delete(int *history_selected, int *history_scroll) {
+  HistoryEntry *history = NULL;
+  int count = 0;
+  if (load_history(&history, &count) == 0 && count > 0) {
+    HistoryEntry *new_history = malloc((count - 1) * sizeof(HistoryEntry));
+    if (new_history) {
+      int new_idx = 0;
+      for (int i = 0; i < count; i++) {
+        if (i != *history_selected) {
+          new_history[new_idx++] = history[i];
+        }
+      }
+      save_history(new_history, count - 1);
+      free(new_history);
+
+      if (*history_selected >= count - 1) {
+        *history_selected = count - 2;
+      }
+      if (*history_selected < 0) {
+        *history_selected = 0;
+      }
+      if (*history_selected < *history_scroll) {
+        *history_scroll = *history_selected;
+      }
+    }
+    free(history);
+  }
+}
+
+static void handle_space_key(UIConfig *config, int selected_field) {
+  switch (selected_field) {
+    case FIELD_ALGORITHM:
+      cycle_algorithm(config->algorithm);
+      break;
+    case FIELD_FORMAT:
+      cycle_format(config->format);
+      break;
+    case FIELD_SHOW_TIME:
+      config->show_time = !config->show_time;
+      if (!config->show_time) {
+        config->time_only = 0;
+      }
+      break;
+    case FIELD_TIME_ONLY:
+      if (config->show_time) {
+        config->time_only = !config->time_only;
+      }
+      break;
+    case FIELD_RAW_OUTPUT:
+      config->raw_output = !config->raw_output;
+      break;
+    case FIELD_OUTPUT_FILE:
+      config->has_output_file = !config->has_output_file;
+      if (!config->has_output_file) {
+        config->output_file[0] = '\0';
+      }
+      break;
+  }
+}
+
+static void handle_enter_key(WINDOW *main_win, UIConfig *config, int selected_field) {
+  switch (selected_field) {
+    case FIELD_NUMBER:
+      edit_number(main_win, &config->fib_number, 0, 1000000);
+      break;
+    case FIELD_ALGORITHM:
+      cycle_algorithm(config->algorithm);
+      break;
+    case FIELD_FORMAT:
+      cycle_format(config->format);
+      break;
+    case FIELD_OUTPUT_FILE:
+      if (config->has_output_file || config->output_file[0] == '\0') {
+        if (edit_string(main_win, config->output_file, MAX_INPUT_SIZE, "Enter output filename:")) {
+          config->has_output_file = 1;
+        }
+      } else {
+        config->has_output_file = 0;
+        config->output_file[0] = '\0';
+      }
+      break;
+    case FIELD_CONFIRM:
+      calculate_result(config);
+      break;
+  }
+}
+
 static void calculate_result(UIConfig *config) {
   // Free previous result if exists
   if (config->result_string) {
@@ -708,17 +827,7 @@ void run_user_interface(int *argc, char ***argv) {
       case KEY_UP:
       case 'k':
         if (current_view == VIEW_HISTORY) {
-          HistoryEntry *history = NULL;
-          int count = 0;
-          if (load_history(&history, &count) == 0 && count > 0) {
-            if (history_selected > 0) {
-              history_selected--;
-              if (history_selected < history_scroll) {
-                history_scroll = history_selected;
-              }
-            }
-            free(history);
-          }
+          handle_history_up(&history_selected, &history_scroll);
         } else {
           selected_field = (selected_field - 1 + FIELD_COUNT) % FIELD_COUNT;
           if (!config.show_time && selected_field == FIELD_TIME_ONLY) {
@@ -730,18 +839,7 @@ void run_user_interface(int *argc, char ***argv) {
       case KEY_DOWN:
       case 'j':
         if (current_view == VIEW_HISTORY) {
-          HistoryEntry *history = NULL;
-          int count = 0;
-          if (load_history(&history, &count) == 0 && count > 0) {
-            if (history_selected < count - 1) {
-              history_selected++;
-              int max_items = max_y - 11;  // Adjust for UI space
-              if (history_selected >= history_scroll + max_items) {
-                history_scroll = history_selected - max_items + 1;
-              }
-            }
-            free(history);
-          }
+          handle_history_down(&history_selected, &history_scroll, max_y);
         } else {
           selected_field = (selected_field + 1) % FIELD_COUNT;
           if (!config.show_time && selected_field == FIELD_TIME_ONLY) {
@@ -762,98 +860,20 @@ void run_user_interface(int *argc, char ***argv) {
       case 'd':
       case 'D':
         if (current_view == VIEW_HISTORY) {
-          HistoryEntry *history = NULL;
-          int count = 0;
-          if (load_history(&history, &count) == 0 && count > 0) {
-            // Remove selected entry
-            HistoryEntry *new_history = malloc((count - 1) * sizeof(HistoryEntry));
-            if (new_history) {
-              int new_idx = 0;
-              for (int i = 0; i < count; i++) {
-                if (i != history_selected) {
-                  new_history[new_idx++] = history[i];
-                }
-              }
-              save_history(new_history, count - 1);
-              free(new_history);
-
-              // Adjust selection
-              if (history_selected >= count - 1) {
-                history_selected = count - 2;
-              }
-              if (history_selected < 0) {
-                history_selected = 0;
-              }
-              if (history_selected < history_scroll) {
-                history_scroll = history_selected;
-              }
-            }
-            free(history);
-          }
+          handle_history_delete(&history_selected, &history_scroll);
         }
         break;
 
       case ' ':  // SPACE - toggle boolean fields or cycle options
         if (current_view == VIEW_MAIN) {
-          switch (selected_field) {
-            case FIELD_ALGORITHM:
-              cycle_algorithm(config.algorithm);
-              break;
-            case FIELD_FORMAT:
-              cycle_format(config.format);
-              break;
-            case FIELD_SHOW_TIME:
-              config.show_time = !config.show_time;
-              if (!config.show_time) {
-                config.time_only = 0;
-              }
-              break;
-            case FIELD_TIME_ONLY:
-              if (config.show_time) {
-                config.time_only = !config.time_only;
-              }
-              break;
-            case FIELD_RAW_OUTPUT:
-              config.raw_output = !config.raw_output;
-              break;
-            case FIELD_OUTPUT_FILE:
-              config.has_output_file = !config.has_output_file;
-              if (!config.has_output_file) {
-                config.output_file[0] = '\0';
-              }
-              break;
-          }
+          handle_space_key(&config, selected_field);
         }
         break;
 
       case '\n':  // Line feed (Enter key - ASCII 10)
       case 13:    // Carriage return
         if (current_view == VIEW_MAIN) {
-          switch (selected_field) {
-            case FIELD_NUMBER:
-              edit_number(main_win, &config.fib_number, 0, 1000000);
-              break;
-            case FIELD_ALGORITHM:
-              cycle_algorithm(config.algorithm);
-              break;
-            case FIELD_FORMAT:
-              cycle_format(config.format);
-              break;
-            case FIELD_OUTPUT_FILE:
-              if (config.has_output_file || config.output_file[0] == '\0') {
-                if (edit_string(main_win, config.output_file, MAX_INPUT_SIZE,
-                                "Enter output filename:")) {
-                  config.has_output_file = 1;
-                }
-              } else {
-                config.has_output_file = 0;
-                config.output_file[0] = '\0';
-              }
-              break;
-            case FIELD_CONFIRM:
-              calculate_result(&config);
-              break;
-          }
+          handle_enter_key(main_win, &config, selected_field);
         }
         break;
 
