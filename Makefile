@@ -131,6 +131,12 @@ endif
 
 all: gcc banner $(BUILD_ID_HEADER) $(TARGET)
 	@echo "✓ Build complete: $(TARGET) ($(VERSION))"
+ifndef keep-objects
+	@echo "Cleaning temporary build files..."
+	@rm -f $(OBJ) $(DEP)
+	@rm -f $(BUILD_ID_HEADER)
+	@echo "✓ Temporary files removed (use 'make keep-objects=1' to keep them)"
+endif
 
 $(BUILD_ID_HEADER):
 	@echo "Generating build ID..."
@@ -482,6 +488,7 @@ clean:
 cleanobj:
 	@echo "Cleaning object files..."
 	@rm -f $(OBJ) $(DEP)
+	@rm -f $(BUILD_ID_HEADER)
 
 distclean: clean
 	@echo "Deep cleaning..."
@@ -498,7 +505,7 @@ rebuild: clean all
 
 info:
 	@echo "════════════════════════════════════════════════════════"
-	@echo "  Project Information"
+	@echo "  fib information"
 	@echo "════════════════════════════════════════════════════════"
 	@echo "Project: $(PROJECT_NAME) v$(VERSION)"
 	@echo "Author: $(AUTHOR)"
@@ -527,7 +534,7 @@ help:
 	@echo "════════════════════════════════════════════════════════"
 	@echo ""
 	@echo "Build Targets:"
-	@echo "  all            - Build the project (default)"
+	@echo "  all            - Build the project (default, removes .o and .d files)"
 	@echo "  debug          - Build with debug symbols and no optimization"
 	@echo "  release        - Build optimized release version"
 	@echo "  profile        - Build with profiling support (gprof)"
@@ -570,7 +577,8 @@ help:
 	@echo "  help           - Display this help message"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make                    # Build normally"
+	@echo "  make                    # Build normally (auto-clean .o/.d)"
+	@echo "  make keep-objects=1     # Build and keep .o and .d files"
 	@echo "  make debug              # Build with debug info"
 	@echo "  make test-full          # Run all tests"
 	@echo "  make PREFIX=/opt install # Install to /opt/bin"
