@@ -4,6 +4,18 @@
 #include <gmp.h>
 #include <time.h>
 
+// Include build ID if available
+#ifdef __has_include
+#if __has_include("build_id.h")
+#include "build_id.h"
+#endif
+#endif
+
+// Fallback if build_id.h doesn't exist
+#ifndef BUILD_ID
+#define BUILD_ID "dev"
+#endif
+
 typedef enum { ITERATIVE, RECURSIVE, MATRIX } Algorithm;
 typedef enum { DECIMAL, HEXADECIMAL, BINARY } OutputFormat;
 

@@ -1,5 +1,5 @@
 PROJECT_NAME = fib
-VERSION = 0.2.0
+VERSION = 0.3.0
 AUTHOR = Rodrigo Belloso
 
 # Compiler and tools
@@ -7,6 +7,10 @@ CC = gcc
 AR = ar
 INSTALL = install
 SHELL = /bin/bash
+
+# Build ID generation
+BUILD_ID_HEADER = build_id.h
+BUILD_ID_GEN = ./buildID.sh
 
 # Directories
 PREFIX ?= /usr/local
@@ -125,8 +129,13 @@ endif
 
 .DEFAULT_GOAL := all
 
-all: gcc banner $(TARGET)
+all: gcc banner $(BUILD_ID_HEADER) $(TARGET)
 	@echo "✓ Build complete: $(TARGET) ($(VERSION))"
+
+$(BUILD_ID_HEADER):
+	@echo "Generating build ID..."
+	@chmod +x $(BUILD_ID_GEN)
+	@$(BUILD_ID_GEN) > $(BUILD_ID_HEADER)
 
 gcc:
 	@command -v $(CC) >/dev/null 2>&1 || { echo "Error: gcc is required but not installed. Please install gcc."; exit 1; }
@@ -134,6 +143,7 @@ gcc:
 banner:
 	@echo "════════════════════════════════════════════════════════"
 	@echo "  Building $(PROJECT_NAME) v$(VERSION)"
+	@echo "  Build ID will be generated during compilation"
 	@echo "  Platform: $(UNAME_S) $(UNAME_M)"
 	@echo "  Compiler: $(CC)"
 	@echo "  Flags: $(CFLAGS)"
@@ -463,6 +473,7 @@ endif
 clean:
 	@echo "Cleaning build artifacts..."
 	@rm -f $(OBJ) $(DEP) $(TARGET)
+	@rm -f $(BUILD_ID_HEADER)
 	@rm -f *.gcda *.gcno *.gcov
 	@rm -f gmon.out
 	@rm -rf *.dSYM

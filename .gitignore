@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+# Build artifacts
+build_id.h
+
 # Object files
 *.o
 *.ko

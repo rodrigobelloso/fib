@@ -337,6 +337,7 @@ void display_help(const char *program_name) {
   printf("\n");
   printf("Options:\n");
   printf("  -h, --help    Display this help message and exit.\n");
+  printf("  -V, --version Show version and build information.\n");
   printf("  -y, --history Show calculation history and exit.\n");
   printf("  -t, --time    Show calculation time.\n");
   printf("  -T, --time-only\n");
