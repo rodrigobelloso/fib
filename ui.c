@@ -54,7 +54,7 @@ typedef enum {
   FIELD_COUNT
 } FieldType;
 
-typedef enum { VIEW_MAIN, VIEW_HISTORY } ViewMode;
+typedef enum { VIEW_MAIN, VIEW_HISTORY, VIEW_PERFORMANCE } ViewMode;
 
 static void init_colors(void) {
   if (has_colors()) {
@@ -89,7 +89,7 @@ static void draw_footer(WINDOW *win, int max_y) {
   wattron(win, A_DIM);
   mvwprintw(win, max_y - 2, 2,
             "Navigation: UP/DOWN or TAB | Edit: ENTER | Toggle: SPACE | Calculate: F");
-  mvwprintw(win, max_y - 1, 2, "Quit: Q or ESC | History: H");
+  mvwprintw(win, max_y - 1, 2, "Quit: Q or ESC | History: H | Performance: P");
   wattroff(win, A_DIM);
 }
 
@@ -98,6 +98,154 @@ static void draw_history_footer(WINDOW *win, int max_y) {
   mvwprintw(win, max_y - 2, 2, "Navigation: UP/DOWN | Delete: D");
   mvwprintw(win, max_y - 1, 2, "Back to Main: H or ESC | Quit: Q");
   wattroff(win, A_DIM);
+}
+
+static void draw_performance_footer(WINDOW *win, int max_y) {
+  wattron(win, A_DIM);
+  mvwprintw(win, max_y - 2, 2, "Navigation: UP/DOWN to scroll");
+  mvwprintw(win, max_y - 1, 2, "Back to Main: P or ESC | Quit: Q");
+  wattroff(win, A_DIM);
+}
+
+static void draw_performance_graph(WINDOW *win, int scroll_offset) {
+  int max_y, max_x;
+  getmaxyx(win, max_y, max_x);
+
+  wclear(win);
+  box(win, 0, 0);
+
+  draw_header(win);
+
+  wattron(win, A_BOLD);
+  mvwprintw(win, 3, 4, "Performance Graph - Calculation Time vs Fibonacci Number");
+  wattroff(win, A_BOLD);
+
+  HistoryEntry *history = NULL;
+  int count = 0;
+
+  if (load_history(&history, &count) != 0 || count == 0) {
+    mvwprintw(win, 5, 4, "No calculation history available.");
+    draw_performance_footer(win, max_y);
+    wrefresh(win);
+    free(history);
+    return;
+  }
+
+  // Find min and max values for scaling
+  double max_time = 0.0;
+  long max_number = 0;
+  for (int i = 0; i < count; i++) {
+    if (history[i].calc_time > max_time) {
+      max_time = history[i].calc_time;
+    }
+    if (history[i].fib_number > max_number) {
+      max_number = history[i].fib_number;
+    }
+  }
+
+  // Graph dimensions
+  int graph_height = max_y - 13;
+  int graph_width = max_x - 20;
+  int graph_x = 12;
+  int graph_y = 6;
+
+  if (graph_height < 5 || graph_width < 20) {
+    mvwprintw(win, 5, 4, "Terminal too small to display graph.");
+    draw_performance_footer(win, max_y);
+    wrefresh(win);
+    free(history);
+    return;
+  }
+
+  // Draw axes
+  wattron(win, A_DIM);
+  // Y-axis
+  for (int i = 0; i < graph_height; i++) {
+    mvwprintw(win, graph_y + i, graph_x - 1, "|");
+  }
+  // X-axis
+  for (int i = 0; i < graph_width; i++) {
+    mvwprintw(win, graph_y + graph_height, graph_x + i, "-");
+  }
+  mvwprintw(win, graph_y + graph_height, graph_x - 1, "+");
+  wattroff(win, A_DIM);
+
+  // Y-axis label
+  wattron(win, A_BOLD);
+  mvwprintw(win, graph_y - 1, 4, "Time (s)");
+  wattroff(win, A_BOLD);
+
+  // Y-axis scale
+  for (int i = 0; i <= 4; i++) {
+    double value = max_time * (4 - i) / 4.0;
+    int y_pos = graph_y + (graph_height - 1) * i / 4;
+    mvwprintw(win, y_pos, 2, "%.3f", value);
+  }
+
+  // X-axis label
+  wattron(win, A_BOLD);
+  mvwprintw(win, graph_y + graph_height + 1, graph_x + graph_width / 2 - 4, "Fib(n)");
+  wattroff(win, A_BOLD);
+
+  // Plot points
+  for (int i = 0; i < count; i++) {
+    // Scale x and y to fit graph
+    int x_pos = (int) ((double) history[i].fib_number / max_number * (graph_width - 1));
+    int y_pos = graph_height - 1 - (int) (history[i].calc_time / max_time * (graph_height - 1));
+
+    if (x_pos >= 0 && x_pos < graph_width && y_pos >= 0 && y_pos < graph_height) {
+      // Choose character based on algorithm
+      char marker;
+      switch (history[i].algorithm) {
+        case MATRIX:
+          marker = 'M';
+          wattron(win, A_BOLD);
+          break;
+        case ITERATIVE:
+          marker = 'I';
+          break;
+        case RECURSIVE:
+          marker = 'R';
+          break;
+        default:
+          marker = '*';
+      }
+
+      mvwprintw(win, graph_y + y_pos, graph_x + x_pos, "%c", marker);
+
+      if (history[i].algorithm == MATRIX) {
+        wattroff(win, A_BOLD);
+      }
+    }
+  }
+
+  // Legend
+  int legend_y = max_y - 6;
+  wattron(win, A_BOLD);
+  mvwprintw(win, legend_y, 4, "Legend:");
+  wattroff(win, A_BOLD);
+
+  wattron(win, A_BOLD);
+  mvwprintw(win, legend_y + 1, 6, "M");
+  wattroff(win, A_BOLD);
+  mvwprintw(win, legend_y + 1, 8, "- Matrix algorithm");
+
+  mvwprintw(win, legend_y + 1, 32, "I");
+  mvwprintw(win, legend_y + 1, 34, "- Iterative algorithm");
+
+  mvwprintw(win, legend_y + 1, 60, "R");
+  mvwprintw(win, legend_y + 1, 62, "- Recursive algorithm");
+
+  // Statistics
+  wattron(win, A_DIM);
+  mvwprintw(win, legend_y - 2, 4, "Total calculations: %d | Max time: %.6fs | Max Fib(n): %ld",
+            count, max_time, max_number);
+  wattroff(win, A_DIM);
+
+  draw_performance_footer(win, max_y);
+  wrefresh(win);
+
+  free(history);
 }
 
 static void draw_history_view(WINDOW *win, int selected_index, int scroll_offset) {
@@ -756,8 +904,10 @@ void run_user_interface(int *argc, char ***argv) {
   while (running) {
     if (current_view == VIEW_MAIN) {
       draw_ui(main_win, &config, selected_field);
-    } else {
+    } else if (current_view == VIEW_HISTORY) {
       draw_history_view(main_win, history_selected, history_scroll);
+    } else if (current_view == VIEW_PERFORMANCE) {
+      draw_performance_graph(main_win, 0);
     }
 
     int ch = wgetch(main_win);
@@ -805,6 +955,8 @@ void run_user_interface(int *argc, char ***argv) {
           current_view = VIEW_MAIN;
           history_selected = 0;
           history_scroll = 0;
+        } else if (current_view == VIEW_PERFORMANCE) {
+          current_view = VIEW_MAIN;
         } else {
           free(config.result_string);
           delwin(main_win);
@@ -820,6 +972,15 @@ void run_user_interface(int *argc, char ***argv) {
           history_selected = 0;
           history_scroll = 0;
         } else {
+          current_view = VIEW_MAIN;
+        }
+        break;
+
+      case 'p':
+      case 'P':
+        if (current_view == VIEW_MAIN) {
+          current_view = VIEW_PERFORMANCE;
+        } else if (current_view == VIEW_PERFORMANCE) {
           current_view = VIEW_MAIN;
         }
         break;
