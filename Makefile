@@ -21,7 +21,7 @@ TESTDIR = tests
 BUILDDIR = build
 
 # Source files
-SRC = fib.c algorithms.c matrix.c utils.c ui.c
+SRC = fib.c algorithms.c matrix.c utils.c ui.c ui_theme.c ui_draw.c ui_input.c ui_handlers.c
 OBJ = $(SRC:.c=.o)
 DEP = $(SRC:.c=.d)
 TARGET = $(PROJECT_NAME)
